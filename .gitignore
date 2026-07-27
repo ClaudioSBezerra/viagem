@@ -1,0 +1,4 @@
+/roteiro-iberia
+/data/
+*.sqlite
+*.json.bak

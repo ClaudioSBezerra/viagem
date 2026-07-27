@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roteiro Ibérico 2026 — Lisboa · Porto · Coruña · Madrid · Granada · Málaga · Sevilha · Salamanca</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1D24;
+    --night:#122630;
+    --night-2:#183541;
+    --paper:#EFE7D6;
+    --paper-2:#E4D9C2;
+    --brass:#C79A3C;
+    --rust:#A6503B;
+    --teal:#3E6B63;
+    --teal-light:#7FA79C;
+    --line:rgba(239,231,214,0.18);
+    --shadow:0 18px 40px rgba(15,29,36,0.35);
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--night);
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    line-height:1.55;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace; letter-spacing:0.02em;}
+  a{color:inherit;}
+
+  /* ---------- HERO ---------- */
+  .hero{
+    position:relative;
+    padding:5.5rem 1.5rem 4rem;
+    text-align:center;
+    background:
+      radial-gradient(ellipse at top, rgba(199,154,60,0.14), transparent 60%),
+      linear-gradient(180deg, var(--ink), var(--night) 70%);
+    border-bottom:1px solid var(--line);
+    overflow:hidden;
+  }
+  .hero::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image:
+      radial-gradient(circle, rgba(239,231,214,0.05) 1px, transparent 1px);
+    background-size:22px 22px;
+    opacity:0.5;
+    pointer-events:none;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    text-transform:uppercase;
+    letter-spacing:0.28em;
+    font-size:0.72rem;
+    color:var(--brass);
+    margin-bottom:1.1rem;
+  }
+  .hero h1{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:clamp(2.1rem, 5vw, 3.6rem);
+    margin:0 0 0.9rem;
+    letter-spacing:-0.01em;
+  }
+  .hero h1 em{
+    font-style:italic;
+    font-weight:500;
+    color:var(--teal-light);
+  }
+  .hero p.sub{
+    max-width:620px;
+    margin:0 auto;
+    color:rgba(239,231,214,0.72);
+    font-size:1.02rem;
+  }
+  .hero-route{
+    margin-top:2.4rem;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.78rem;
+    color:var(--teal-light);
+    letter-spacing:0.02em;
+    display:flex; flex-wrap:wrap; justify-content:center; gap:0.4rem 0.6rem;
+  }
+  .hero-route span.dot{color:var(--brass);}
+
+  /* ---------- QUICK ACTIONS ---------- */
+  .quickbar{
+    display:flex; flex-wrap:wrap; gap:0.75rem; justify-content:center;
+    padding:1.6rem 1.5rem 0;
+  }
+  .btn{
+    display:inline-flex; align-items:center; gap:0.5rem;
+    padding:0.65rem 1.15rem;
+    border-radius:999px;
+    font-size:0.88rem; font-weight:600;
+    text-decoration:none;
+    border:1px solid var(--line);
+    transition:transform .15s ease, background .15s ease;
+    white-space:nowrap;
+  }
+  .btn:hover{transform:translateY(-1px);}
+  .btn-brass{background:var(--brass); color:var(--ink); border-color:var(--brass);}
+  .btn-teal{background:var(--teal); color:var(--paper);}
+  .btn-ghost{background:transparent; color:var(--paper);}
+  .btn-ghost:hover{background:rgba(239,231,214,0.08);}
+  .btn-sm{padding:0.45rem 0.85rem; font-size:0.78rem; border-radius:8px;}
+
+  /* ---------- LEGEND / INTRO ---------- */
+  .intro{
+    max-width:760px; margin:3.2rem auto 0; padding:0 1.5rem;
+    text-align:center;
+    color:rgba(239,231,214,0.75);
+    font-size:0.95rem;
+  }
+  .intro strong{color:var(--paper);}
+
+  /* ---------- TIMELINE ---------- */
+  .timeline{
+    max-width:920px;
+    margin:4rem auto 6rem;
+    padding:0 1.25rem;
+    position:relative;
+  }
+  .timeline::before{
+    content:"";
+    position:absolute;
+    left:28px;
+    top:0; bottom:0;
+    width:2px;
+    background:repeating-linear-gradient(
+      to bottom, var(--brass) 0 6px, transparent 6px 14px
+    );
+  }
+  @media(min-width:720px){
+    .timeline::before{left:50%; margin-left:-1px;}
+  }
+
+  .leg{
+    position:relative;
+    margin:0 0 0.4rem 64px;
+    padding:0.6rem 0 0.6rem 0.2rem;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.78rem;
+    color:var(--teal-light);
+  }
+  @media(min-width:720px){
+    .leg{margin-left:0; text-align:center; padding-left:0;}
+  }
+  .leg .leg-inner{
+    display:inline-flex; align-items:center; gap:0.6rem; flex-wrap:wrap;
+  }
+  .leg .arrow{color:var(--brass);}
+
+  .stop{
+    position:relative;
+    margin-left:64px;
+    margin-bottom:2.4rem;
+  }
+  @media(min-width:720px){
+    .stop{
+      width:46%;
+      margin-left:0;
+    }
+    .stop.right{margin-left:54%;}
+  }
+  .stop-marker{
+    position:absolute;
+    left:-52px; top:2px;
+    width:34px; height:34px;
+    border-radius:50%;
+    background:var(--night-2);
+    border:2px solid var(--brass);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.75rem; font-weight:600;
+    color:var(--brass);
+    z-index:2;
+  }
+  @media(min-width:720px){
+    .stop-marker{left:auto; right:-63px;}
+    .stop.right .stop-marker{right:auto; left:-63px;}
+  }
+
+  .card{
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .card-head{
+    padding:1.3rem 1.4rem 0.9rem;
+    border-bottom:1px dashed rgba(15,29,36,0.15);
+  }
+  .card-head .dates{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--rust);
+    margin-bottom:0.35rem;
+  }
+  .card-head h2{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:1.5rem;
+    margin:0;
+  }
+  .card-head .nights{
+    font-size:0.82rem; color:rgba(15,29,36,0.6); margin-top:0.2rem;
+  }
+  .card-body{padding:1.1rem 1.4rem 1.4rem;}
+  .hotel{
+    font-size:0.92rem;
+    margin-bottom:0.9rem;
+  }
+  .hotel .label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.68rem;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--teal);
+    display:block;
+    margin-bottom:0.15rem;
+  }
+  .note{
+    font-size:0.88rem;
+    color:rgba(15,29,36,0.72);
+    background:rgba(166,80,59,0.08);
+    border-left:3px solid var(--rust);
+    padding:0.6rem 0.8rem;
+    border-radius:0 8px 8px 0;
+    margin-bottom:0.9rem;
+  }
+  .actions{
+    display:flex; flex-wrap:wrap; gap:0.5rem;
+  }
+  .actions a.btn-sm{
+    background:var(--night);
+    color:var(--paper);
+    border:none;
+  }
+  .actions a.btn-sm.waze{background:#33CCFF; color:#08202B;}
+  .actions a.btn-sm.gmaps{background:#1a73e8; color:#fff;}
+  .actions a.btn-sm.photos{background:var(--teal); color:var(--paper);}
+  .actions a.btn-sm.view{background:transparent; color:var(--ink); border:1px solid rgba(15,29,36,0.25);}
+
+  .map-wrap{
+    margin-top:1rem;
+    border-radius:10px;
+    overflow:hidden;
+    border:1px solid rgba(15,29,36,0.12);
+  }
+  .map-wrap iframe{
+    width:100%; height:220px; border:0; display:block;
+  }
+  details.mapd summary{
+    cursor:pointer;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.74rem;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--teal);
+    margin-top:0.9rem;
+    user-select:none;
+  }
+
+  /* ---------- FOOTER PANEL: TIPS ---------- */
+  .panel{
+    max-width:920px; margin:0 auto 6rem; padding:0 1.25rem;
+  }
+  .panel h3{
+    font-family:'Fraunces',serif;
+    font-size:1.5rem;
+    color:var(--brass);
+    margin-bottom:1rem;
+  }
+  .tips{
+    display:grid; grid-template-columns:1fr; gap:0.9rem;
+  }
+  @media(min-width:640px){ .tips{grid-template-columns:1fr 1fr;} }
+  .tip{
+    background:var(--night-2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:1.1rem 1.2rem;
+    font-size:0.88rem;
+    color:rgba(239,231,214,0.82);
+  }
+  .tip .n{
+    font-family:'IBM Plex Mono',monospace;
+    color:var(--brass);
+    font-size:0.72rem;
+    display:block;
+    margin-bottom:0.4rem;
+  }
+
+  footer{
+    text-align:center;
+    padding:2.5rem 1.5rem 3.5rem;
+    color:rgba(239,231,214,0.45);
+    font-size:0.8rem;
+    font-family:'IBM Plex Mono',monospace;
+    border-top:1px solid var(--line);
+  }
+
+  /* ---------- SHARED-FEATURE NOTICE ---------- */
+  .live-note{
+    max-width:920px; margin:0 auto 1.4rem; padding:0 1.25rem;
+  }
+  .live-note .box{
+    background:rgba(199,154,60,0.1);
+    border:1px solid rgba(199,154,60,0.35);
+    border-radius:10px;
+    padding:0.8rem 1rem;
+    font-size:0.82rem;
+    color:var(--brass);
+  }
+  .live-note .box.offline{
+    background:rgba(166,80,59,0.12);
+    border-color:rgba(166,80,59,0.4);
+    color:#E39B8A;
+  }
+
+  /* ---------- GALLERY ---------- */
+  .gallery-form{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:0.6rem;
+    background:var(--night-2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:1.1rem;
+    margin-bottom:1.3rem;
+  }
+  @media(min-width:640px){
+    .gallery-form{grid-template-columns:1fr 1fr;}
+    .gallery-form .full{grid-column:1/-1;}
+  }
+  .gallery-form input, .gallery-form textarea{
+    width:100%;
+    background:var(--paper);
+    color:var(--ink);
+    border:1px solid rgba(15,29,36,0.15);
+    border-radius:8px;
+    padding:0.6rem 0.75rem;
+    font-family:'Inter',sans-serif;
+    font-size:0.88rem;
+  }
+  .gallery-form textarea{resize:vertical; min-height:44px;}
+  .gallery-form button{
+    grid-column:1/-1;
+    background:var(--brass); color:var(--ink);
+    border:none; border-radius:999px;
+    padding:0.65rem 1.2rem;
+    font-weight:600; font-size:0.88rem;
+    cursor:pointer;
+  }
+  .gallery-form button:disabled{opacity:0.6; cursor:wait;}
+  .gallery-hint{
+    font-size:0.78rem; color:rgba(239,231,214,0.55);
+    margin:-0.6rem 0 1.2rem;
+  }
+  .gallery-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(160px, 1fr));
+    gap:0.8rem;
+  }
+  .photo-card{
+    background:var(--paper); border-radius:10px; overflow:hidden;
+    box-shadow:var(--shadow);
+  }
+  .photo-card img{
+    width:100%; height:140px; object-fit:cover; display:block;
+    background:var(--night-2);
+  }
+  .photo-card .meta{
+    padding:0.55rem 0.7rem 0.7rem;
+    color:var(--ink);
+  }
+  .photo-card .meta .who{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.68rem; color:var(--rust); text-transform:uppercase;
+  }
+  .photo-card .meta .cap{font-size:0.82rem; margin-top:0.15rem;}
+  .empty-state{
+    color:rgba(239,231,214,0.5);
+    font-size:0.88rem;
+    padding:1.5rem;
+    text-align:center;
+    border:1px dashed var(--line);
+    border-radius:10px;
+  }
+
+  /* ---------- CHAT ---------- */
+  .chat-box{
+    background:var(--night-2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:1rem;
+  }
+  .chat-messages{
+    display:flex; flex-direction:column; gap:0.55rem;
+    max-height:360px; overflow-y:auto;
+    padding-right:0.3rem;
+    margin-bottom:0.9rem;
+  }
+  .msg{
+    background:var(--paper); color:var(--ink);
+    border-radius:12px; border-top-left-radius:4px;
+    padding:0.5rem 0.75rem;
+    max-width:80%;
+    align-self:flex-start;
+    font-size:0.88rem;
+  }
+  .msg .who{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.68rem; color:var(--teal); text-transform:uppercase;
+    display:block; margin-bottom:0.1rem;
+  }
+  .msg .ts{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.65rem; color:rgba(15,29,36,0.4);
+    display:block; margin-top:0.25rem;
+  }
+  .chat-form{display:flex; flex-wrap:wrap; gap:0.5rem;}
+  .chat-form input[name="chat-name"]{flex:0 0 140px;}
+  .chat-form input[name="chat-text"]{flex:1 1 220px;}
+  .chat-form input{
+    background:var(--paper); color:var(--ink);
+    border:1px solid rgba(15,29,36,0.15);
+    border-radius:8px; padding:0.55rem 0.75rem;
+    font-family:'Inter',sans-serif; font-size:0.88rem;
+  }
+  .chat-form button{
+    background:var(--teal); color:var(--paper);
+    border:none; border-radius:999px;
+    padding:0.55rem 1.2rem; font-weight:600; font-size:0.85rem;
+    cursor:pointer;
+  }
+  .chat-form button:disabled{opacity:0.6; cursor:wait;}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="eyebrow">Roteiro de carro · 14–31 out 2026 · 7 passageiros</div>
+  <h1>Saindo Lisboa <em>e retorno</em> Lisboa,<br>passando pela Ibéria toda</h1>
+  <p class="sub">Porto → A Coruña → Madrid → Granada → Málaga → Sevilha → Salamanca, e de volta. ~2.834&nbsp;km de estrada, carro retirado e devolvido em Lisboa.</p>
+  <div class="hero-route mono">
+    <span>LIS</span><span class="dot">•</span><span>OPO</span><span class="dot">•</span><span>A CORUÑA</span><span class="dot">•</span><span>MADRID</span><span class="dot">•</span><span>GRANADA</span><span class="dot">•</span><span>MÁLAGA</span><span class="dot">•</span><span>SEVILHA</span><span class="dot">•</span><span>SALAMANCA</span><span class="dot">•</span><span>LIS</span>
+  </div>
+  <div class="quickbar">
+    <a class="btn btn-brass" href="https://drive.google.com/drive/folders/1VD2nYaItHTJG6dJl77rWdwvDErywCqzG?usp=drive_link" target="_blank" rel="noopener">📁 Repositório de fotos (Drive)</a>
+    <a class="btn btn-teal" href="#roteiro">🗺️ Ver roteiro dia a dia</a>
+    <a class="btn btn-ghost" href="#dicas">⚠️ Dicas de carro/estrada</a>
+  </div>
+</header>
+
+<p class="intro">Cada parada abaixo tem o hotel, o trecho de estrada até chegar lá, botões diretos para <strong>Waze</strong> e <strong>Google Maps</strong>, e um mapa da cidade. Fotos do grupo vão todas para a pasta compartilhada do Drive — qualquer um dos 7 pode subir fotos lá.</p>
+
+<div id="roteiro" class="timeline">
+
+  <!-- STOP 0 -->
+  <div class="stop">
+    <div class="stop-marker">✈</div>
+    <div class="card">
+      <div class="card-head">
+        <div class="dates">14–15 OUT</div>
+        <h2>Goiânia → Lisboa</h2>
+        <div class="nights">Chegada 07:10 (hora local) · voo LATAM JJ3373 + conexão em GRU</div>
+      </div>
+      <div class="card-body">
+        <div class="note">Retirada do carro sugerida no dia 17/10, ao sair de Lisboa — nos 2 primeiros dias, cidade a pé/Uber é mais prático que carro.</div>
+        <div class="actions">
+          <a class="btn-sm view" href="https://www.google.com/search?q=Aeroporto+Humberto+Delgado+Lisboa&tbm=isch" target="_blank" rel="noopener">Ver fotos do aeroporto</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STOP 1: LISBOA -->
+  <div class="stop right">
+    <div class="stop-marker">1</div>
+    <div class="card">
+      <div class="card-head">
+        <div class="dates">15–17 OUT · 2 noites</div>
+        <h2>Lisboa</h2>
+      </div>
+      <div class="card-body">
+        <div class="hotel">
+          <span class="label">Hotel</span>
+          Sana Rex Hotel
+        </div>
+        <div class="actions">
+          <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Sana+Rex+Hotel+Lisboa" target="_blank" rel="noopener">Google Maps</a>
+          <a class="btn-sm waze" href="https://waze.com/ul?q=Sana%20Rex%20Hotel%20Lisboa&navigate=yes" target="_blank" rel="noopener">Waze</a>
+          <a class="btn-sm photos" href="https://www.google.com/search?q=Lisboa+Alfama+Belem&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
+        </div>
+        <details class="mapd">
+          <summary>Ver mapa de Lisboa</summary>
+          <div class="map-wrap">
+            <iframe loading="lazy" src="https://maps.google.com/maps?q=Lisboa%2C%20Portugal&t=m&z=12&output=embed"></iframe>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="leg">
+    <div class="leg-inner">
+      <span class="arrow">↓</span> Lisboa → Porto <span class="arrow">·</span> ~314 km <span class="arrow">·</span> ~2h40–3h <span class="arrow">·</span> A1
+      <a class="btn-sm gmaps" href="https://www.google.com/maps/dir/?api=1&origin=Lisboa,Portugal&destination=Porto,Portugal&travelmode=driving" target="_blank" rel="noopener">Rota</a>
+      <a class="btn-sm waze" href="https://waze.com/ul?q=Porto%2C%20Portugal&navigate=yes" target="_blank" rel="noopener">Waze</a>
+    </div>
+  </div>
+
+  <!-- STOP 2: PORTO -->
+  <div class="stop">
+    <div class="stop-marker">2</div>
+    <div class="card">
+      <div class="card-head">
+        <div class="dates">17–19 OUT · 2 noites</div>
+        <h2>Porto</h2>
+      </div>
+      <div class="card-body">
+        <div class="hotel">
+          <span class="label">Hotel</span>
+          Bessahotel Boavista
+        </div>
+        <div class="note">Retirada do carro aqui, se ainda não retirado em Lisboa. Centro histórico é ruim para trânsito — deixem o carro no hotel e explorem a pé/metrô.</div>
+        <div class="actions">
+          <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Bessahotel+Boavista+Porto" target="_blank" rel="noopener">Google Maps</a>
+          <a class="btn-sm waze" href="https://waze.com/ul?q=Bessahotel%20Boavista%20Porto&navigate=yes" target="_blank" rel="noopener">Waze</a>
+          <a class="btn-sm photos" href="https://www.google.com/search?q=Porto+Ribeira+Dom+Luis&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
+        </div>
+        <details class="mapd">
+          <summary>Ver mapa do Porto</summary>
+          <div class="map-wrap">
+            <iframe loading="lazy" src="https://maps.google.com/maps?q=Porto%2C%20Portugal&t=m&z=12&output=embed"></iframe>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="leg">
+    <div class="leg-inner">
+      <span class="arrow">↓</span> Porto → A Coruña <span class="arrow">·</span> ~300 km <span class="arrow">·</span> ~3h <span class="arrow">·</span> cruza fronteira ES
+      <a class="btn-sm gmaps" href="https://www.google.com/maps/dir/?api=1&origin=Porto,Portugal&destination=A+Coruna,Spain&travelmode=driving" target="_blank" rel="noopener">Rota</a>
+      <a class="btn-sm waze" href="https://waze.com/ul?q=A%20Coru%C3%B1a%2C%20Espa%C3%B1a&navigate=yes" target="_blank" rel="noopener">Waze</a>
+    </div>
+  </div>
+
+  <!-- STOP 3: A CORUÑA -->
+  <div class="stop right">
+    <div class="stop-marker">3</div>
+    <div class="card">
+      <div class="card-head">
+        <div class="dates">19–20 OUT · 1 noite</div>
+        <h2>A Coruña</h2>
+      </div>
+      <div class="card-body">
+        <div class="hotel">
+          <span class="label">Hotel</span>
+          Hesperia A Coruña Centro
+        </div>
+        <div class="actions">
+          <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Hesperia+A+Coruna+Centro" target="_blank" rel="noopener">Google Maps</a>
+          <a class="btn-sm waze" href="https://waze.com/ul?q=Hesperia%20A%20Coru%C3%B1a%20Centro&navigate=yes" target="_blank" rel="noopener">Waze</a>
+          <a class="btn-sm photos" href="https://www.google.com/search?q=A+Coru%C3%B1a+Torre+de+Hercules&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
+        </div>
+        <details class="mapd">
+          <summary>Ver mapa de A Coruña</summary>
+          <div class="map-wrap">
+            <iframe loading="lazy" src="https://maps.google.com/maps?q=A%20Coru%C3%B1a%2C%20Espa%C3%B1a&t=m&z=12&output=embed"></iframe>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="leg">
+    <div class="leg-inner">
+      <span class="arrow">↓</span> A Coruña → Madrid <span class="arrow">·</span> ~590 km <span class="arrow">·</span> ~5h30–6h <span class="arrow">·</span> trecho mais longo
+      <a class="btn-sm gmaps" href="https://www.google.com/maps/dir/?api=1&origin=A+Coruna,Spain&destination=Madrid,Spain&travelmode=driving" target="_blank" rel="noopener">Rota</a>
+      <a class="btn-sm waze" href="https://waze.com/ul?q=Madrid%2C%20Espa%C3%B1a&navigate=yes" target="_blank" rel="noopener">Waze</a>
+    </div>
+  </div>
+
+  <!-- STOP 4: MADRID -->
+  <div class="stop">
+    <div class="stop-marker">4</div>
+    <div class="card">
+      <div class="card-head">
+        <div class="dates">20–22 OUT · 2 noites</div>
+        <h2>Madrid</h2>
+      </div>
+      <div class="card-body">
+        <div class="hotel">
+          <span class="label">Hotel</span>
+          Hotel Madrid Centro Affiliated by Meliá
+        </div>
+        <div class="note">Hotel fica na Zona de Bajas Emisiones (Distrito Centro) — perguntem na recepção sobre autorização de acesso de carro antes de entrar na região.</div>
+        <div class="actions">
+          <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Hotel+Madrid+Centro+Affiliated+by+Melia" target="_blank" rel="noopener">Google Maps</a>
+          <a class="btn-sm waze" href="https://waze.com/ul?q=Hotel%20Madrid%20Centro%20Melia&navigate=yes" target="_blank" rel="noopener">Waze</a>
+          <a class="btn-sm photos" href="https://www.google.com/search?q=Madrid+Gran+Via+Palacio&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
+        </div>
+        <details class="mapd">
+          <summary>Ver mapa de Madrid</summary>
+          <div class="map-wrap">
+            <iframe loading="lazy" src="https://maps.google.com/maps?q=Madrid%2C%20Espa%C3%B1a&t=m&z=12&output=embed"></iframe>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="leg">
+    <div class="leg-inner">
+      <span class="arrow">↓</span> Madrid → Granada <span class="arrow">·</span> ~420 km <span class="arrow">·</span> ~4h15
+      <a class="btn-sm gmaps" href="https://www.google.com/maps/dir/?api=1&origin=Madrid,Spain&destination=Granada,Spain&travelmode=driving" target="_blank" rel="noopener">Rota</a>
+      <a class="btn-sm waze" href="https://waze.com/ul?q=Granada%2C%20Espa%C3%B1a&navigate=yes" target="_blank" rel="noopener">Waze</a>
+    </div>
+  </div>
+
+  <!-- STOP 5: GRANADA -->
+  <div class="stop right">
+    <div class="stop-marker">5</div>
+    <div class="card">
+      <div class="card-head">
+        <div class="dates">22–24 OUT · 2 noites</div>
+        <h2>Granada</h2>
+      </div>
+      <div class="card-body">
+        <div class="hotel">
+          <span class="label">Hotel</span>
+          Porcel Alixares
+        </div>
+        <div class="actions">
+          <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Porcel+Alixares+Granada" target="_blank" rel="noopener">Google Maps</a>
+          <a class="btn-sm waze" href="https://waze.com/ul?q=Porcel%20Alixares%20Granada&navigate=yes" target="_blank" rel="noopener">Waze</a>
+          <a class="btn-sm photos" href="https://www.google.com/search?q=Granada+Alhambra&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
+        </div>
+        <details class="mapd">
+          <summary>Ver mapa de Granada</summary>
+          <div class="map-wrap">
+            <iframe loading="lazy" src="https://maps.google.com/maps?q=Granada%2C%20Espa%C3%B1a&t=m&z=12&output=embed"></iframe>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="leg">
+    <div class="leg-inner">
+      <span class="arrow">↓</span> Granada → Torremolinos <span class="arrow">·</span> ~130 km <span class="arrow">·</span> ~1h30–2h
+      <a class="btn-sm gmaps" href="https://www.google.com/maps/dir/?api=1&origin=Granada,Spain&destination=Torremolinos,Spain&travelmode=driving" target="_blank" rel="noopener">Rota</a>
+      <a class="btn-sm waze" href="https://waze.com/ul?q=Torremolinos%2C%20Espa%C3%B1a&navigate=yes" target="_blank" rel="noopener">Waze</a>
+    </div>
+  </div>
+
+  <!-- STOP 6: TORREMOLINOS -->
+  <div class="stop">
+    <div class="stop-marker">6</div>
+    <div class="card">
+      <div class="card-head">
+        <div class="dates">24–27 OUT · 3 noites</div>
+        <h2>Torremolinos (Málaga)</h2>
+      </div>
+      <div class="card-body">
+        <div class="hotel">
+          <span class="label">Hotel</span>
+          Hotel Los Jazmines
+        </div>
+        <div class="actions">
+          <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Hotel+Los+Jazmines+Torremolinos" target="_blank" rel="noopener">Google Maps</a>
+          <a class="btn-sm waze" href="https://waze.com/ul?q=Hotel%20Los%20Jazmines%20Torremolinos&navigate=yes" target="_blank" rel="noopener">Waze</a>
+          <a class="btn-sm photos" href="https://www.google.com/search?q=Torremolinos+Malaga+praia&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
+        </div>
+        <details class="mapd">
+          <summary>Ver mapa de Torremolinos</summary>
+          <div class="map-wrap">
+            <iframe loading="lazy" src="https://maps.google.com/maps?q=Torremolinos%2C%20Espa%C3%B1a&t=m&z=12&output=embed"></iframe>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="leg">
+    <div class="leg-inner">
+      <span class="arrow">↓</span> Torremolinos → Sevilha <span class="arrow">·</span> ~210 km <span class="arrow">·</span> ~2h
+      <a class="btn-sm gmaps" href="https://www.google.com/maps/dir/?api=1&origin=Torremolinos,Spain&destination=Sevilla,Spain&travelmode=driving" target="_blank" rel="noopener">Rota</a>
+      <a class="btn-sm waze" href="https://waze.com/ul?q=Sevilla%2C%20Espa%C3%B1a&navigate=yes" target="_blank" rel="noopener">Waze</a>
+    </div>
+  </div>
+
+  <!-- STOP 7: SEVILHA -->
+  <div class="stop right">
+    <div class="stop-marker">7</div>
+    <div class="card">
+      <div class="card-head">
+        <div class="dates">27–29 OUT · 2 noites</div>
+        <h2>Sevilha</h2>
+      </div>
+      <div class="card-body">
+        <div class="hotel">
+          <span class="label">Hotel</span>
+          Duquesa Sevilla
+        </div>
+        <div class="actions">
+          <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Duquesa+Sevilla+Hotel" target="_blank" rel="noopener">Google Maps</a>
+          <a class="btn-sm waze" href="https://waze.com/ul?q=Duquesa%20Sevilla%20Hotel&navigate=yes" target="_blank" rel="noopener">Waze</a>
+          <a class="btn-sm photos" href="https://www.google.com/search?q=Sevilha+Plaza+de+Espana&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
+        </div>
+        <details class="mapd">
+          <summary>Ver mapa de Sevilha</summary>
+          <div class="map-wrap">
+            <iframe loading="lazy" src="https://maps.google.com/maps?q=Sevilla%2C%20Espa%C3%B1a&t=m&z=12&output=embed"></iframe>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="leg">
+    <div class="leg-inner">
+      <span class="arrow">↓</span> Sevilha → Salamanca <span class="arrow">·</span> ~400 km <span class="arrow">·</span> ~4h30 <span class="arrow">·</span> Ruta de la Plata (A-66)
+      <a class="btn-sm gmaps" href="https://www.google.com/maps/dir/?api=1&origin=Sevilla,Spain&destination=Salamanca,Spain&travelmode=driving" target="_blank" rel="noopener">Rota</a>
+      <a class="btn-sm waze" href="https://waze.com/ul?q=Salamanca%2C%20Espa%C3%B1a&navigate=yes" target="_blank" rel="noopener">Waze</a>
+    </div>
+  </div>
+
+  <!-- STOP 8: SALAMANCA -->
+  <div class="stop">
+    <div class="stop-marker">8</div>
+    <div class="card">
+      <div class="card-head">
+        <div class="dates">29–31 OUT · 2 noites</div>
+        <h2>Salamanca</h2>
+      </div>
+      <div class="card-body">
+        <div class="hotel">
+          <span class="label">Hotel</span>
+          San Polo
+        </div>
+        <div class="actions">
+          <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Hotel+San+Polo+Salamanca" target="_blank" rel="noopener">Google Maps</a>
+          <a class="btn-sm waze" href="https://waze.com/ul?q=Hotel%20San%20Polo%20Salamanca&navigate=yes" target="_blank" rel="noopener">Waze</a>
+          <a class="btn-sm photos" href="https://www.google.com/search?q=Salamanca+Plaza+Mayor&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
+        </div>
+        <details class="mapd">
+          <summary>Ver mapa de Salamanca</summary>
+          <div class="map-wrap">
+            <iframe loading="lazy" src="https://maps.google.com/maps?q=Salamanca%2C%20Espa%C3%B1a&t=m&z=12&output=embed"></iframe>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="leg">
+    <div class="leg-inner">
+      <span class="arrow">↓</span> Salamanca → Aeroporto de Lisboa <span class="arrow">·</span> ~470 km <span class="arrow">·</span> ~4h30 <span class="arrow">·</span> saída 05:30–06:00
+      <a class="btn-sm gmaps" href="https://www.google.com/maps/dir/?api=1&origin=Salamanca,Spain&destination=Aeroporto+Humberto+Delgado,Lisboa&travelmode=driving" target="_blank" rel="noopener">Rota</a>
+      <a class="btn-sm waze" href="https://waze.com/ul?q=Aeroporto%20Humberto%20Delgado%20Lisboa&navigate=yes" target="_blank" rel="noopener">Waze</a>
+    </div>
+  </div>
+
+  <!-- STOP 9: VOLTA -->
+  <div class="stop right">
+    <div class="stop-marker">✈</div>
+    <div class="card">
+      <div class="card-head">
+        <div class="dates">31 OUT</div>
+        <h2>Lisboa → Goiânia</h2>
+        <div class="nights">Devolução do carro no aeroporto · voo LATAM JJ8149, 13:50 → GRU 21:05 · conexão GYN 01:10 (madrugada 01/11)</div>
+      </div>
+      <div class="card-body">
+        <div class="note">Chegar ao aeroporto com 2h30–3h de antecedência. Devolvam o carro com tanque cheio e fotografem o veículo antes de entregar.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="dicas" class="panel">
+  <h3>Dicas rápidas para quem vai dirigir</h3>
+  <div class="tips">
+    <div class="tip"><span class="n">01 · LOCADORA</span>Confirmem por escrito que o contrato permite sair de Portugal para a Espanha — algumas locadoras cobram taxa extra ou exigem aviso prévio.</div>
+    <div class="tip"><span class="n">02 · PORTAGENS</span>Em Portugal, parte da A1 é portagem 100% eletrônica. Confirmem que o carro já vem com Via Verde ativado na retirada.</div>
+    <div class="tip"><span class="n">03 · MADRID ZBE</span>O hotel em Madrid fica na Zona de Bajas Emisiones — avisem a recepção com antecedência sobre o carro.</div>
+    <div class="tip"><span class="n">04 · REVEZAMENTO</span>O trecho A Coruña → Madrid (~5h30-6h) é o mais longo — revezem entre os motoristas habilitados do grupo.</div>
+    <div class="tip"><span class="n">05 · DOCUMENTOS</span>Levem CNH + Permissão Internacional para Dirigir, passaporte, e cartão de crédito do condutor principal (caução).</div>
+    <div class="tip"><span class="n">06 · FOTOS</span>Subam as fotos do grupo direto na <a href="https://drive.google.com/drive/folders/1VD2nYaItHTJG6dJl77rWdwvDErywCqzG?usp=drive_link" target="_blank" rel="noopener" style="color:var(--rust); text-decoration:underline;">pasta do Drive</a> — organizem por cidade se possível, facilita depois.</div>
+  </div>
+</div>
+
+<div class="live-note">
+  <div class="box" id="live-status">🔄 Verificando conexão com o servidor…</div>
+</div>
+
+<div class="panel" id="galeria">
+  <h3>📸 Galeria do grupo</h3>
+  <p class="sub" style="color:rgba(239,231,214,0.65); font-size:0.9rem; margin-top:-0.6rem; margin-bottom:1.1rem;">
+    Não dá pra anexar o arquivo de foto direto aqui — então suba a foto na
+    <a href="https://drive.google.com/drive/folders/1VD2nYaItHTJG6dJl77rWdwvDErywCqzG?usp=drive_link" target="_blank" rel="noopener" style="color:var(--brass); text-decoration:underline;">pasta do Drive</a>,
+    clique com o botão direito nela → "Compartilhar" → "Copiar link", e cole o link abaixo. Ela aparece na galeria pra todo mundo.
+  </p>
+  <form class="gallery-form" id="photo-form">
+    <input type="text" name="p-name" placeholder="Seu nome" required maxlength="40">
+    <input type="text" name="p-city" placeholder="Cidade / legenda" required maxlength="60">
+    <input type="url" class="full" name="p-url" placeholder="Link da foto (Drive, Imgur, etc.)" required maxlength="500">
+    <button type="submit">Adicionar foto</button>
+  </form>
+  <div class="gallery-grid" id="gallery-grid">
+    <div class="empty-state">Carregando galeria…</div>
+  </div>
+</div>
+
+<div class="panel" id="chat">
+  <h3>💬 Chat do grupo</h3>
+  <div class="chat-box">
+    <div class="chat-messages" id="chat-messages">
+      <div class="empty-state">Carregando mensagens…</div>
+    </div>
+    <form class="chat-form" id="chat-form">
+      <input type="text" name="chat-name" placeholder="Nome" required maxlength="40">
+      <input type="text" name="chat-text" placeholder="Escreva uma mensagem…" required maxlength="500">
+      <button type="submit">Enviar</button>
+    </form>
+  </div>
+</div>
+
+<footer>
+  Roteiro Ibérico · 14–31 out 2026 · 7 passageiros · atualize esta página com o grupo antes de imprimir/fixar os planos finais
+</footer>
+
+<script>
+(function(){
+  const statusEl = document.getElementById('live-status');
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  async function api(path, opts){
+    const res = await fetch(path, opts);
+    if(!res.ok){
+      let msg = 'Erro no servidor';
+      try{ msg = (await res.json()).error || msg; }catch(e){}
+      throw new Error(msg);
+    }
+    return res.json();
+  }
+
+  /* ---------------- GALLERY ---------------- */
+  function renderGallery(photos){
+    const grid = document.getElementById('gallery-grid');
+    if(!photos.length){
+      grid.innerHTML = '<div class="empty-state">Nenhuma foto ainda — seja o primeiro a adicionar!</div>';
+      return;
+    }
+    grid.innerHTML = photos.slice().reverse().map(p => `
+      <div class="photo-card">
+        <img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.city)}" loading="lazy" onerror="this.style.display='none'">
+        <div class="meta">
+          <span class="who">${escapeHtml(p.name)}</span>
+          <div class="cap">${escapeHtml(p.city)}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function initGallery(){
+    try{
+      renderGallery(await api('/api/photos'));
+    }catch(e){
+      document.getElementById('gallery-grid').innerHTML = '<div class="empty-state">Não consegui carregar a galeria agora.</div>';
+    }
+
+    const form = document.getElementById('photo-form');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = form.querySelector('button');
+      btn.disabled = true;
+      try{
+        const fd = new FormData(form);
+        await api('/api/photos', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            name: fd.get('p-name').trim(),
+            city: fd.get('p-city').trim(),
+            url: fd.get('p-url').trim()
+          })
+        });
+        renderGallery(await api('/api/photos'));
+        form.reset();
+      }catch(err){
+        alert(err.message || 'Não consegui salvar a foto agora. Tente de novo em alguns segundos.');
+      }finally{
+        btn.disabled = false;
+      }
+    });
+
+    setInterval(async () => {
+      try{ renderGallery(await api('/api/photos')); }catch(e){}
+    }, 12000);
+  }
+
+  /* ---------------- CHAT ---------------- */
+  function fmtTime(ts){
+    const d = new Date(ts);
+    return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+  }
+
+  function renderChat(messages){
+    const box = document.getElementById('chat-messages');
+    if(!messages.length){
+      box.innerHTML = '<div class="empty-state">Nenhuma mensagem ainda — comecem a combinar os detalhes!</div>';
+      return;
+    }
+    const wasAtBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 20;
+    box.innerHTML = messages.map(m => `
+      <div class="msg">
+        <span class="who">${escapeHtml(m.name)}</span>
+        ${escapeHtml(m.text)}
+        <span class="ts">${fmtTime(m.ts)}</span>
+      </div>
+    `).join('');
+    if(wasAtBottom || messages.length <= 5) box.scrollTop = box.scrollHeight;
+  }
+
+  async function initChat(){
+    try{
+      renderChat(await api('/api/chat'));
+    }catch(e){
+      document.getElementById('chat-messages').innerHTML = '<div class="empty-state">Não consegui carregar as mensagens agora.</div>';
+    }
+
+    const form = document.getElementById('chat-form');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = form.querySelector('button');
+      btn.disabled = true;
+      try{
+        const fd = new FormData(form);
+        const text = fd.get('chat-text').trim();
+        const name = fd.get('chat-name').trim();
+        if(!text || !name) return;
+        await api('/api/chat', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({name, text})
+        });
+        renderChat(await api('/api/chat'));
+        form.querySelector('input[name="chat-text"]').value = '';
+      }catch(err){
+        alert(err.message || 'Não consegui enviar a mensagem agora. Tente de novo em alguns segundos.');
+      }finally{
+        btn.disabled = false;
+      }
+    });
+
+    setInterval(async () => {
+      try{ renderChat(await api('/api/chat')); }catch(e){}
+    }, 6000);
+  }
+
+  (async function boot(){
+    try{
+      await api('/api/photos');
+      statusEl.textContent = '✅ Conectado — fotos e mensagens são compartilhadas entre todo o grupo em tempo real.';
+    }catch(e){
+      statusEl.textContent = '⚠️ Não consegui conectar ao servidor agora. Atualize a página em alguns instantes.';
+      statusEl.classList.add('offline');
+    }
+    initGallery();
+    initChat();
+  })();
+})();
+</script>
+
+</body>
+</html>
