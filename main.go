@@ -2,14 +2,18 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"syscall"
@@ -22,13 +26,28 @@ import (
 //go:embed web/index.html
 var webFS embed.FS
 
-const maxBodyBytes = 8 * 1024
+const (
+	maxBodyBytes   = 8 * 1024
+	maxUploadBytes = 15 * 1024 * 1024
+)
 
 var urlScheme = regexp.MustCompile(`(?i)^https?://`)
+
+var mimeExt = map[string]string{
+	"image/jpeg": ".jpg",
+	"image/png":  ".png",
+	"image/gif":  ".gif",
+	"image/webp": ".webp",
+}
 
 func main() {
 	addr := envOr("ADDR", "127.0.0.1:8080")
 	dbPath := envOr("DB_PATH", "data/trip.json")
+	uploadsDir := filepath.Join(filepath.Dir(dbPath), "uploads")
+
+	if err := os.MkdirAll(uploadsDir, 0o755); err != nil {
+		log.Fatalf("failed to create uploads dir %s: %v", uploadsDir, err)
+	}
 
 	s, err := store.New(dbPath)
 	if err != nil {
@@ -79,6 +98,66 @@ func main() {
 		}
 
 		p := store.Photo{Name: name, City: city, URL: url, Ts: time.Now().UnixMilli()}
+		if err := s.AddPhoto(p); err != nil {
+			log.Printf("add photo: %v", err)
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "falha ao salvar"})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+	})
+
+	mux.Handle("GET /uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(uploadsDir))))
+
+	mux.HandleFunc("POST /api/upload", func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes)
+		if err := r.ParseMultipartForm(maxUploadBytes); err != nil {
+			writeJSON(w, http.StatusRequestEntityTooLarge, map[string]string{"error": "arquivo muito grande (max 15MB)"})
+			return
+		}
+
+		name := strings.TrimSpace(r.FormValue("name"))
+		city := strings.TrimSpace(r.FormValue("city"))
+		if !validField(name, 40) || !validField(city, 60) {
+			writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": "campos invalidos"})
+			return
+		}
+
+		file, _, err := r.FormFile("photo")
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "arquivo nao enviado"})
+			return
+		}
+		defer file.Close()
+
+		sniff := make([]byte, 512)
+		n, _ := io.ReadFull(file, sniff)
+		contentType := http.DetectContentType(sniff[:n])
+		ext, ok := mimeExt[contentType]
+		if !ok {
+			writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": "formato de imagem nao suportado (use jpg, png, gif ou webp)"})
+			return
+		}
+		if _, err := file.Seek(0, io.SeekStart); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "falha ao processar arquivo"})
+			return
+		}
+
+		filename := fmt.Sprintf("%d-%s%s", time.Now().UnixNano(), randomHex(8), ext)
+		dst, err := os.Create(filepath.Join(uploadsDir, filename))
+		if err != nil {
+			log.Printf("create upload file: %v", err)
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "falha ao salvar arquivo"})
+			return
+		}
+		defer dst.Close()
+
+		if _, err := io.Copy(dst, file); err != nil {
+			log.Printf("write upload file: %v", err)
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "falha ao salvar arquivo"})
+			return
+		}
+
+		p := store.Photo{Name: name, City: city, URL: "/uploads/" + filename, Ts: time.Now().UnixMilli()}
 		if err := s.AddPhoto(p); err != nil {
 			log.Printf("add photo: %v", err)
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "falha ao salvar"})
@@ -152,6 +231,14 @@ func envOr(key, fallback string) string {
 
 func validField(v string, maxLen int) bool {
 	return v != "" && utf8.RuneCountInString(v) <= maxLen
+}
+
+func randomHex(n int) string {
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		return fmt.Sprintf("%x", time.Now().UnixNano())
+	}
+	return hex.EncodeToString(b)
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {

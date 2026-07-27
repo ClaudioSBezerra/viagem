@@ -812,14 +812,12 @@
 <div class="panel" id="galeria">
   <h3>📸 Galeria do grupo</h3>
   <p class="sub" style="color:rgba(239,231,214,0.65); font-size:0.9rem; margin-top:-0.6rem; margin-bottom:1.1rem;">
-    Não dá pra anexar o arquivo de foto direto aqui — então suba a foto na
-    <a href="https://drive.google.com/drive/folders/1VD2nYaItHTJG6dJl77rWdwvDErywCqzG?usp=drive_link" target="_blank" rel="noopener" style="color:var(--brass); text-decoration:underline;">pasta do Drive</a>,
-    clique com o botão direito nela → "Compartilhar" → "Copiar link", e cole o link abaixo. Ela aparece na galeria pra todo mundo.
+    Escolha uma foto do celular ou computador e clique em "Adicionar foto" — ela fica salva aqui pra todo mundo ver (jpg, png, gif ou webp, até 15MB).
   </p>
   <form class="gallery-form" id="photo-form">
     <input type="text" name="p-name" placeholder="Seu nome" required maxlength="40">
     <input type="text" name="p-city" placeholder="Cidade / legenda" required maxlength="60">
-    <input type="url" class="full" name="p-url" placeholder="Link da foto (Drive, Imgur, etc.)" required maxlength="500">
+    <input type="file" class="full" name="p-file" accept="image/jpeg,image/png,image/gif,image/webp" required>
     <button type="submit">Adicionar foto</button>
   </form>
   <div class="gallery-grid" id="gallery-grid">
@@ -894,16 +892,19 @@
       const btn = form.querySelector('button');
       btn.disabled = true;
       try{
-        const fd = new FormData(form);
-        await api('/api/photos', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({
-            name: fd.get('p-name').trim(),
-            city: fd.get('p-city').trim(),
-            url: fd.get('p-url').trim()
-          })
-        });
+        const fd = new FormData();
+        fd.set('name', form.querySelector('[name="p-name"]').value.trim());
+        fd.set('city', form.querySelector('[name="p-city"]').value.trim());
+        const fileInput = form.querySelector('[name="p-file"]');
+        if(!fileInput.files[0]) throw new Error('Escolha uma foto primeiro.');
+        fd.set('photo', fileInput.files[0]);
+
+        const res = await fetch('/api/upload', { method: 'POST', body: fd });
+        if(!res.ok){
+          let msg = 'Não consegui salvar a foto agora.';
+          try{ msg = (await res.json()).error || msg; }catch(e){}
+          throw new Error(msg);
+        }
         renderGallery(await api('/api/photos'));
         form.reset();
       }catch(err){

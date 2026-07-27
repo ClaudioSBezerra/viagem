@@ -1,9 +1,11 @@
 # Roteiro Ibérico 2026 — micro site da viagem
 
-Site estático (roteiro dia a dia, hotéis, rotas) + galeria de fotos (links) e chat
-compartilhado entre os 7 passageiros. Um único binário Go, sem dependências
-externas: o HTML fica embutido no binário (`go:embed`) e os dados (fotos/chat)
-são guardados em `data/trip.json` (em produção, num volume Docker persistente).
+Site estático (roteiro dia a dia, hotéis, rotas) + galeria de fotos (upload
+direto do celular/computador) e chat compartilhado entre os 7 passageiros. Um
+único binário Go, sem dependências externas: o HTML fica embutido no binário
+(`go:embed`), as fotos enviadas ficam em `data/uploads/` e os metadados
+(fotos/chat) em `data/trip.json` — tudo dentro do mesmo volume Docker
+persistente em produção.
 
 Deploy: **Coolify**, no mesmo VPS (76.13.171.196) e domínio (`fbtax.cloud`) do
 FAROL e do SMARTPICK — em `viagem.fbtax.cloud`.
@@ -41,8 +43,8 @@ por terem vários serviços — api, db, redis — na mesma stack).
      desse subdomínio aponta pro IP do servidor `76.13.171.196`, se ainda não
      estiver.
    - Aba **Storages**: adicione um volume persistente com mount path `/data`
-     (é onde o app grava `trip.json` — sem isso, fotos e chat somem a cada
-     redeploy).
+     (é onde o app grava `trip.json` e as fotos enviadas — sem isso, tudo
+     some a cada redeploy).
    - Deploy.
 
 ### Atualizar depois
@@ -60,9 +62,9 @@ git push
 ## Backup dos dados
 
 ```bash
-docker cp $(docker ps -qf name=viagem):/data/trip.json ./backup-trip-$(date +%F).json
+docker cp $(docker ps -qf name=viagem):/data ./backup-viagem-$(date +%F)
 ```
-(rode direto no VPS, via SSH)
+(rode direto no VPS, via SSH — copia `trip.json` e a pasta `uploads/` inteira)
 
 ## Proteção de acesso (opcional)
 
@@ -74,7 +76,7 @@ de Basic Auth pronto na aba de configurações do app (nome de usuário/senha
 ## Estrutura
 
 ```
-main.go               servidor HTTP + rotas /api/photos e /api/chat
+main.go               servidor HTTP + rotas /api/photos, /api/upload, /api/chat
 internal/store/       persistência em JSON (mutex + escrita atômica)
 web/index.html         site (embutido no binário via go:embed)
 Dockerfile             build multi-stage (Go alpine → alpine runtime)
