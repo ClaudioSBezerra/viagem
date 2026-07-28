@@ -47,6 +47,18 @@ const (
 	// quotes this never runs on a timer — only a person clicking the button,
 	// at most once an hour.
 	flightCooldown = 1 * time.Hour
+
+	// altCooldown gates the "outra data" whole-itinerary search: it prices
+	// all 8 stays plus the flight for a shifted date range in one go (as
+	// many as ~18 SerpApi searches, worst case), against the same shared
+	// quota — a much steeper cooldown than either individual feature.
+	altCooldown = 6 * time.Hour
+
+	// tripStartDate/tripEndDate anchor the day-offset math for the
+	// alternate-date search: they must match Stays[0].Checkin - 1 day and
+	// flights.Routes[0].Return in trip.go, or the shift will be wrong.
+	tripStartDate = "2026-10-14"
+	tripEndDate   = "2026-10-31"
 )
 
 var urlScheme = regexp.MustCompile(`(?i)^https?://`)
@@ -110,6 +122,14 @@ func main() {
 		log.Printf("flights: enabled (%d rota(s), cotacao manual, cooldown de %s)", len(flights.Routes), flightCooldown)
 	} else {
 		log.Printf("flights: disabled (missing SERPAPI_KEY)")
+	}
+
+	altEnabled := quotesEnabled && flightsEnabled
+	altRefresh := &altRefresher{hotelFetcher: refresher.fetcher, flightFetcher: flightRefresh.fetcher, store: s}
+	if altEnabled {
+		log.Printf("alt-search: enabled (cotacao manual do roteiro inteiro em outra data, cooldown de %s)", altCooldown)
+	} else {
+		log.Printf("alt-search: disabled (precisa de quotes e flights habilitados)")
 	}
 
 	mux := http.NewServeMux()
@@ -290,6 +310,48 @@ func main() {
 				return
 			}
 			writeJSON(w, http.StatusAccepted, map[string]any{"started": true, "startedAt": startedAt.UnixMilli()})
+		})
+	}
+
+	if altEnabled {
+		// Prices the whole itinerary (8 stays + the flight) for a start date
+		// the caller picks, so the group can compare against the primary
+		// dates. Results land in the same /api/quotes and /api/flights
+		// responses under "-alt"-suffixed IDs — no separate GET endpoint.
+		mux.HandleFunc("POST /api/alt-search", func(w http.ResponseWriter, r *http.Request) {
+			var body struct {
+				StartDate string `json:"startDate"`
+			}
+			if !decodeJSON(w, r, &body) {
+				return
+			}
+
+			delta, err := daysBetween(tripStartDate, body.StartDate)
+			if err != nil {
+				writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": "data invalida, use AAAA-MM-DD"})
+				return
+			}
+
+			startedAt, wait, ok := altRefresh.start(body.StartDate)
+			if !ok {
+				writeJSON(w, http.StatusTooManyRequests, map[string]any{
+					"error":      "busca alternativa recente demais, aguarde (cota compartilhada com hoteis e voo)",
+					"retryAfter": int(wait.Seconds()),
+				})
+				return
+			}
+
+			shiftedEnd := ""
+			if endDate, eerr := time.Parse("2006-01-02", tripEndDate); eerr == nil {
+				shiftedEnd = endDate.AddDate(0, 0, delta).Format("2006-01-02")
+			}
+
+			writeJSON(w, http.StatusAccepted, map[string]any{
+				"started":   true,
+				"startedAt": startedAt.UnixMilli(),
+				"newStart":  body.StartDate,
+				"newEnd":    shiftedEnd,
+			})
 		})
 	}
 
@@ -484,6 +546,110 @@ func (fr *flightRefresher) run() {
 			log.Printf("flights: cache %s: %v", spec.ID, err)
 		}
 	}
+}
+
+// altRefresher prices the whole itinerary (8 stays + the flight) for a
+// shifted date range, so the group can compare "what if we went a bit
+// earlier/later" against the primary dates without losing those quotes —
+// results are cached under "-alt"-suffixed IDs in the same store.
+type altRefresher struct {
+	hotelFetcher  *quotes.Fetcher
+	flightFetcher *flights.Fetcher
+	store         *store.Store
+
+	mu      sync.Mutex
+	running bool
+	last    time.Time
+}
+
+func (ar *altRefresher) start(startDate string) (time.Time, time.Duration, bool) {
+	ar.mu.Lock()
+	defer ar.mu.Unlock()
+
+	if ar.running {
+		return time.Time{}, altCooldown, false
+	}
+	if wait := time.Until(ar.last.Add(altCooldown)); wait > 0 {
+		return time.Time{}, wait, false
+	}
+
+	startedAt := time.Now()
+	ar.running = true
+	go ar.run(startDate)
+	return startedAt, 0, true
+}
+
+func (ar *altRefresher) nextAllowed() time.Time {
+	ar.mu.Lock()
+	defer ar.mu.Unlock()
+	return ar.last.Add(altCooldown)
+}
+
+func (ar *altRefresher) run(startDate string) {
+	defer func() {
+		ar.mu.Lock()
+		ar.running = false
+		ar.last = time.Now()
+		ar.mu.Unlock()
+	}()
+
+	delta, err := daysBetween(tripStartDate, startDate)
+	if err != nil {
+		log.Printf("alt-search: data invalida %q: %v", startDate, err)
+		return
+	}
+
+	var ok, failed int
+	for i, spec := range quotes.ShiftedStays(delta) {
+		if i > 0 {
+			time.Sleep(quoteSpacing)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+		q := ar.hotelFetcher.Fetch(ctx, spec)
+		cancel()
+
+		if q.Err != "" {
+			failed++
+			log.Printf("alt-search: %s: %s", spec.ID, q.Err)
+		} else {
+			ok++
+		}
+		if err := ar.store.SetQuote(q); err != nil {
+			log.Printf("alt-search: cache %s: %v", spec.ID, err)
+		}
+	}
+
+	for _, spec := range flights.ShiftedRoutes(delta) {
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+		q := ar.flightFetcher.Fetch(ctx, spec)
+		cancel()
+
+		if q.Err != "" {
+			failed++
+			log.Printf("alt-search: %s: %s", spec.ID, q.Err)
+		} else {
+			ok++
+		}
+		if err := ar.store.SetFlightQuote(q); err != nil {
+			log.Printf("alt-search: cache %s: %v", spec.ID, err)
+		}
+	}
+
+	log.Printf("alt-search: ciclo concluido para %s (%d com preco, %d sem)", startDate, ok, failed)
+}
+
+// daysBetween returns how many days b is after a (negative if before), or an
+// error if either isn't a valid YYYY-MM-DD date.
+func daysBetween(a, b string) (int, error) {
+	ta, err := time.Parse("2006-01-02", a)
+	if err != nil {
+		return 0, err
+	}
+	tb, err := time.Parse("2006-01-02", b)
+	if err != nil {
+		return 0, err
+	}
+	return int(tb.Sub(ta).Hours() / 24), nil
 }
 
 func envOr(key, fallback string) string {

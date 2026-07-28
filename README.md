@@ -156,6 +156,27 @@ que não interessa no papel (formulários, chat, galeria, botões, mapas) e
 troca o tema escuro por preto-no-branco, deixando só voos, hotéis (com
 preço, se cotado) e o trecho de estrada com km/duração entre cada cidade.
 
+O botão **"Exibir preços"** ao lado (ligado por padrão) esconde todo preço,
+badge de cotação e os botões de atualizar cotação — tanto na tela quanto no
+PDF gerado em seguida. Serve pra montar uma versão limpa do roteiro (sem
+mostrar o que já foi cotado) antes de mandar pra uma agência de turismo. Fica
+salvo no navegador (localStorage), não no servidor.
+
+## Cotar outra data (roteiro inteiro)
+
+Painel **"Cotar outra data"** desloca as datas de todas as 8 hospedagens +
+o voo pelo mesmo número de dias e cota tudo de novo, pra comparar contra a
+janela atual (14–31 out 2026). Os resultados ficam no mesmo cache com ID
+sufixado `-alt` (ex: `lisboa-alt`), então não sobrescrevem as cotações da
+data principal — aparecem numa seção separada com o total da opção
+alternativa.
+
+Cota compartilhada com hotel e voo (mesmo `SERPAPI_KEY`), e uma rodada
+completa custa bem mais caro que as outras (até ~18 buscas: 8 hospedagens,
+cada uma podendo precisar de 2 buscas, mais 2 do voo) — por isso o cooldown
+é de 6h, o dobro do de hotel. Só aparece na tela quando hotel e voo estão
+os dois habilitados no servidor.
+
 ## Backup dos dados
 
 ```bash

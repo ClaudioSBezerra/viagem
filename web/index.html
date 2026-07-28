@@ -112,6 +112,16 @@
   .btn-ghost:hover{background:rgba(239,231,214,0.08);}
   .btn-sm{padding:0.45rem 0.85rem; font-size:0.78rem; border-radius:8px;}
   button.btn{font-family:inherit; cursor:pointer;}
+  label.price-toggle{cursor:pointer; user-select:none;}
+  label.price-toggle input{margin-right:0.4rem;}
+
+  /* Ligado por padrão; desmarcar some com todo preço/cotação — pensado pra
+     gerar uma versão limpa do roteiro (tela ou PDF) pra mandar pra uma
+     agência de turismo sem expor o que já foi cotado. */
+  body.hide-prices .quote-badge,
+  body.hide-prices .quote-bar,
+  body.hide-prices #resumo,
+  body.hide-prices #alt-search{display:none !important;}
 
   /* ---------- LEGEND / INTRO ---------- */
   .intro{
@@ -219,7 +229,8 @@
   }
   .card-body{padding:1.1rem 1.4rem 1.4rem;}
   .hotel{
-    font-size:0.92rem;
+    font-size:1.08rem;
+    font-weight:600;
     margin-bottom:0.9rem;
   }
   .hotel .label{
@@ -408,6 +419,26 @@
     color:var(--brass);
   }
 
+  .alt-form{
+    display:flex; flex-wrap:wrap; align-items:center; gap:0.7rem;
+  }
+  .alt-form label{font-size:0.88rem; color:rgba(239,231,214,0.85);}
+  .alt-form input[type="date"]{
+    background:var(--paper); color:var(--ink);
+    border:1px solid rgba(15,29,36,0.15);
+    border-radius:8px; padding:0.5rem 0.7rem;
+    font-family:'Inter',sans-serif; font-size:0.88rem;
+  }
+  .alt-form button{
+    background:var(--brass); color:var(--ink);
+    border:none; border-radius:999px;
+    padding:0.55rem 1.2rem; font-weight:600; font-size:0.85rem;
+    cursor:pointer;
+  }
+  .alt-form button:disabled{opacity:0.6; cursor:wait;}
+  .alt-status{font-size:0.85rem; color:rgba(239,231,214,0.75); margin:0.7rem 0 0;}
+  #alt-result .resumo-box{margin-top:0.6rem;}
+
   footer{
     text-align:center;
     padding:2.5rem 1.5rem 3.5rem;
@@ -591,6 +622,10 @@
     .resumo-box{background:none; border:1px solid #999;}
     .resumo-line, .resumo-line.total{color:#000; border-color:#ccc;}
     .resumo-note{color:#333;}
+    #alt-search{break-inside:avoid;}
+    #alt-search h3{color:#000;}
+    #alt-search .sub, .alt-status{color:#333;}
+    .alt-form{display:none !important;}
   }
 </style>
 </head>
@@ -608,6 +643,9 @@
     <a class="btn btn-teal" href="#roteiro">🗺️ Ver roteiro dia a dia</a>
     <a class="btn btn-ghost" href="#dicas">⚠️ Dicas de carro/estrada</a>
     <button type="button" class="btn btn-ghost" id="print-pdf">🖨️ Baixar PDF do roteiro</button>
+    <label class="price-toggle btn btn-ghost" for="toggle-prices">
+      <input type="checkbox" id="toggle-prices" checked> Exibir preços
+    </label>
   </div>
 </header>
 
@@ -1197,6 +1235,20 @@
   <div class="resumo-box" id="resumo-box"></div>
 </div>
 
+<div class="panel" id="alt-search" hidden>
+  <h3>📅 Cotar outra data (roteiro inteiro)</h3>
+  <p class="sub" style="color:rgba(239,231,214,0.65); font-size:0.9rem; margin-top:-0.6rem; margin-bottom:1.1rem;">
+    Desloca as mesmas ~17 noites pra outra janela de datas e cota tudo de novo (8 hospedagens + voo) pra comparar com a data atual. Cota compartilhada com as cotações acima — usa bastante crédito de uma vez, então é limitado a 1 busca a cada 6h.
+  </p>
+  <div class="alt-form">
+    <label for="alt-start">Nova data de início (voo de ida)</label>
+    <input type="date" id="alt-start">
+    <button type="button" id="alt-refresh">Cotar essa opção</button>
+  </div>
+  <p id="alt-status" class="alt-status"></p>
+  <div id="alt-result"></div>
+</div>
+
 <div id="dicas" class="panel">
   <h3>Dicas rápidas para quem vai dirigir</h3>
   <div class="tips">
@@ -1440,6 +1492,17 @@
     return digits ? parseInt(digits, 10) : 0;
   }
 
+  // Cotações da busca "outra data" ficam no mesmo mapa, com id sufixado
+  // "-alt" — os contadores/resumo da data principal precisam excluí-las, ou
+  // uma busca alternativa infla "X de 8 com preço" e o total geral.
+  function primaryOnly(obj){
+    const out = {};
+    for(const k in obj){
+      if(!k.endsWith('-alt')) out[k] = obj[k];
+    }
+    return out;
+  }
+
   function fmtBRL(n){
     return 'R$ ' + n.toLocaleString('pt-BR');
   }
@@ -1469,6 +1532,133 @@
       '<div class="resumo-line total"><span>Total geral</span><span>' + fmtBRL(totalGeral) + '</span></div>' +
       '<div class="resumo-line total"><span>Total por pessoa (2 pax)</span><span>' + fmtBRL(porPessoa) + '</span></div>' +
       (completo ? '' : '<p class="resumo-note">Estimativa parcial — nem tudo foi cotado ainda.</p>');
+  }
+
+  /* ---------------- COTAR OUTRA DATA (ROTEIRO INTEIRO) ---------------- */
+  /* Só faz sentido se hotel E voo estiverem habilitados no servidor (mesma
+     chave da SerpApi) — o painel fica escondido até os dois confirmarem. */
+  let quotesOn = false;
+  let flightsOn = false;
+  let altSearchInited = false;
+
+  function maybeInitAltSearch(){
+    if(altSearchInited || !quotesOn || !flightsOn) return;
+    altSearchInited = true;
+    initAltSearch();
+  }
+
+  function renderAltResult(newStart, newEnd, altHotels, altFlights){
+    const box = document.getElementById('alt-result');
+    const hotelTotal = altHotels.filter(q => q.price).reduce((s, q) => s + parseValor(q.price), 0);
+    const flightTotal = altFlights.filter(q => q.price).reduce((s, q) => s + parseValor(q.price), 0);
+    const grand = hotelTotal + flightTotal;
+
+    const hotelRows = altHotels.map(q => {
+      const val = q.price
+        ? q.price + (q.match === 'similar' && q.found ? ' (similar: ' + q.found + ')' : '')
+        : 'sem cotação';
+      return '<div class="resumo-line"><span>' + escapeHtml(q.city || q.id) + '</span><span>' + escapeHtml(val) + '</span></div>';
+    }).join('');
+
+    const flightRows = altFlights.map(q => {
+      const val = q.price ? (q.currency + ' ' + q.price) : 'sem cotação';
+      return '<div class="resumo-line"><span>Passagem aérea</span><span>' + escapeHtml(val) + '</span></div>';
+    }).join('');
+
+    box.innerHTML =
+      '<p class="alt-status">Nova janela: ' + escapeHtml(newStart) + ' a ' + escapeHtml(newEnd) + '</p>' +
+      '<div class="resumo-box">' + hotelRows + flightRows +
+      '<div class="resumo-line total"><span>Total geral (opção alternativa)</span><span>' + fmtBRL(grand) + '</span></div>' +
+      '<div class="resumo-line total"><span>Total por pessoa (2 pax)</span><span>' + fmtBRL(grand / 2) + '</span></div>' +
+      '</div>';
+  }
+
+  function initAltSearch(){
+    const panel = document.getElementById('alt-search');
+    const startInput = document.getElementById('alt-start');
+    const btn = document.getElementById('alt-refresh');
+    const statusText = document.getElementById('alt-status');
+    panel.hidden = false;
+
+    btn.addEventListener('click', async () => {
+      const startDate = startInput.value;
+      if(!startDate){
+        statusText.textContent = 'Escolha uma data.';
+        return;
+      }
+      btn.disabled = true;
+      statusText.textContent = 'Cotando o roteiro inteiro pra essa data…';
+      document.getElementById('alt-result').innerHTML = '';
+
+      let res;
+      try{
+        res = await fetch('/api/alt-search', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({startDate})
+        });
+      }catch(e){
+        statusText.textContent = 'Não consegui iniciar a busca agora.';
+        btn.disabled = false;
+        return;
+      }
+
+      if(res.status === 422){
+        statusText.textContent = 'Data inválida.';
+        btn.disabled = false;
+        return;
+      }
+      if(res.status === 429){
+        let wait = 0;
+        try{ wait = (await res.json()).retryAfter || 0; }catch(e){}
+        statusText.textContent = 'Busca alternativa recente demais — tente de novo em ' +
+                                 Math.ceil(wait / 3600) + 'h.';
+        btn.disabled = false;
+        return;
+      }
+      if(!res.ok){
+        statusText.textContent = 'Não consegui iniciar a busca agora.';
+        btn.disabled = false;
+        return;
+      }
+
+      let startedAt = Date.now();
+      let newStart = startDate;
+      let newEnd = '';
+      try{
+        const data = await res.json();
+        if(typeof data.startedAt === 'number') startedAt = data.startedAt;
+        newStart = data.newStart || newStart;
+        newEnd = data.newEnd || '';
+      }catch(e){}
+
+      const total = HOTEL_STAYS_TOTAL + FLIGHT_ROUTES_TOTAL;
+      let altHotels = [];
+      let altFlights = [];
+
+      for(let i = 0; i < 30; i++){
+        await new Promise(r => setTimeout(r, 5000));
+        try{
+          const hotelData = (await api('/api/quotes')).quotes || {};
+          const flightData = (await api('/api/flights')).flights || {};
+          altHotels = Object.values(hotelData).filter(q => q.id && q.id.endsWith('-alt') && q.ts >= startedAt);
+          altFlights = Object.values(flightData).filter(q => q.id && q.id.endsWith('-alt') && q.ts >= startedAt);
+        }catch(e){
+          continue;
+        }
+        const done = altHotels.length + altFlights.length;
+        if(done >= total){
+          break;
+        }
+        statusText.textContent = 'Cotando… ' + done + ' de ' + total + ' itens atualizados.';
+      }
+
+      if(altHotels.length + altFlights.length > 0){
+        renderAltResult(newStart, newEnd, altHotels, altFlights);
+      }
+      statusText.textContent = 'Cotação de ' + newStart + ' a ' + newEnd + ' concluída.';
+      btn.disabled = false;
+    });
   }
 
   function renderQuotes(quotes){
@@ -1514,9 +1704,10 @@
       const data = await api('/api/quotes');
       const quotes = data.quotes || {};
       renderQuotes(quotes);
-      lastHotelQuotes = quotes;
+      const primary = primaryOnly(quotes);
+      lastHotelQuotes = primary;
       renderResumo();
-      return quotes;
+      return primary;
     }
 
     let quotes;
@@ -1526,6 +1717,8 @@
       return; // cotações desligadas no servidor (QUOTES_ENABLED=0)
     }
     bar.hidden = false;
+    quotesOn = true;
+    maybeInitAltSearch();
 
     const total = document.querySelectorAll('[data-quote]').length;
     if(!Object.keys(quotes).length){
@@ -1628,9 +1821,10 @@
       const data = await api('/api/flights');
       const flights = data.flights || {};
       renderFlightQuotes(flights);
-      lastFlightQuotes = flights;
+      const primary = primaryOnly(flights);
+      lastFlightQuotes = primary;
       renderResumo();
-      return flights;
+      return primary;
     }
 
     let flightQuotes;
@@ -1640,8 +1834,10 @@
       return; // cotação de voo desligada no servidor (sem FLIGHTAPI_KEY)
     }
     bar.hidden = false;
+    flightsOn = true;
+    maybeInitAltSearch();
 
-    const total = document.querySelectorAll('[data-flight]').length;
+    const total = FLIGHT_ROUTES_TOTAL;
     if(!Object.keys(flightQuotes).length){
       statusText.textContent = 'Ainda sem cotação — a cota gratuita da FlightAPI é limitada, use com moderação.';
     }else{
@@ -1711,6 +1907,15 @@
     initFlightQuotes();
 
     document.getElementById('print-pdf').addEventListener('click', () => window.print());
+
+    const togglePrices = document.getElementById('toggle-prices');
+    const showPrices = localStorage.getItem('viagem-show-prices') !== '0';
+    togglePrices.checked = showPrices;
+    document.body.classList.toggle('hide-prices', !showPrices);
+    togglePrices.addEventListener('change', () => {
+      document.body.classList.toggle('hide-prices', !togglePrices.checked);
+      localStorage.setItem('viagem-show-prices', togglePrices.checked ? '1' : '0');
+    });
   })();
 })();
 </script>

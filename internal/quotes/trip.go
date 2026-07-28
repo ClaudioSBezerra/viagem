@@ -1,5 +1,7 @@
 package quotes
 
+import "time"
+
 // Stays lists the hotels of the Iberian itinerary in travel order. The dates
 // mirror the cards in web/index.html — when a stay moves there, it has to move
 // here too, or the quote will price the wrong nights.
@@ -24,4 +26,26 @@ func StayByID(id string) (Spec, bool) {
 		}
 	}
 	return Spec{}, false
+}
+
+// ShiftedStays returns Stays with every date moved by deltaDays and the ID
+// suffixed "-alt", so results land in the cache under their own keys instead
+// of overwriting the primary-date quotes.
+func ShiftedStays(deltaDays int) []Spec {
+	out := make([]Spec, len(Stays))
+	for i, s := range Stays {
+		s.ID += "-alt"
+		s.Checkin = shiftDate(s.Checkin, deltaDays)
+		s.Checkout = shiftDate(s.Checkout, deltaDays)
+		out[i] = s
+	}
+	return out
+}
+
+func shiftDate(d string, days int) string {
+	t, err := time.Parse("2006-01-02", d)
+	if err != nil {
+		return d
+	}
+	return t.AddDate(0, 0, days).Format("2006-01-02")
 }
