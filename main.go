@@ -34,12 +34,11 @@ const (
 	maxBodyBytes   = 8 * 1024
 	maxUploadBytes = 15 * 1024 * 1024
 
-	// quoteInterval is how often prices are refreshed in the background, and
-	// quoteCooldown how long a manual refresh has to wait after the last run.
-	// Both are deliberately slack: eight stays priced twice a day is enough for
-	// planning, and hammering the search pages is what gets an IP blocked.
-	quoteInterval = 12 * time.Hour
-	quoteCooldown = 10 * time.Minute
+	// quoteCooldown gates manual hotel-price refreshes. No background loop
+	// here: SerpApi's quota is shared with the flight lookups above, and one
+	// round already costs 8 searches (one per stay), so this only runs when
+	// someone clicks the button, and rarely.
+	quoteCooldown = 3 * time.Hour
 	quoteSpacing  = 5 * time.Second
 
 	// flightCooldown gates manual flight-price refreshes. SerpApi's free tier
@@ -93,18 +92,20 @@ func main() {
 		log.Fatalf("failed to load embedded index.html: %v", err)
 	}
 
-	quotesEnabled := envOr("QUOTES_ENABLED", "1") != "0"
-	refresher := &quoteRefresher{fetcher: quotes.NewFetcher(), store: s}
+	// Same SerpApi key prices both hotels (google_hotels) and flights
+	// (google_flights) — one shared, limited monthly quota.
+	serpAPIKey := os.Getenv("SERPAPI_KEY")
+
+	quotesEnabled := serpAPIKey != "" && envOr("QUOTES_ENABLED", "1") != "0"
+	refresher := &quoteRefresher{fetcher: quotes.NewFetcher(serpAPIKey), store: s}
 	if quotesEnabled {
-		log.Printf("quotes: enabled (%d hospedagens, refresh a cada %s)", len(quotes.Stays), quoteInterval)
-		go refresher.loop()
+		log.Printf("quotes: enabled (%d hospedagens, cotacao manual, cooldown de %s)", len(quotes.Stays), quoteCooldown)
 	} else {
-		log.Printf("quotes: disabled (QUOTES_ENABLED=0)")
+		log.Printf("quotes: disabled (missing SERPAPI_KEY or QUOTES_ENABLED=0)")
 	}
 
-	flightsAPIKey := os.Getenv("SERPAPI_KEY")
-	flightsEnabled := flightsAPIKey != ""
-	flightRefresh := &flightRefresher{fetcher: flights.NewFetcher(flightsAPIKey), store: s}
+	flightsEnabled := serpAPIKey != ""
+	flightRefresh := &flightRefresher{fetcher: flights.NewFetcher(serpAPIKey), store: s}
 	if flightsEnabled {
 		log.Printf("flights: enabled (%d rota(s), cotacao manual, cooldown de %s)", len(flights.Routes), flightCooldown)
 	} else {
@@ -253,6 +254,8 @@ func main() {
 
 		// Refresh runs in the background: pricing eight stays takes far longer
 		// than the server's write timeout, so the request only kicks it off.
+		// No debug endpoint here, unlike the old Booking scraper — every probe
+		// against a real API would burn a real credit from the shared quota.
 		mux.HandleFunc("POST /api/quotes/refresh", func(w http.ResponseWriter, r *http.Request) {
 			startedAt, wait, ok := refresher.start()
 			if !ok {
@@ -263,19 +266,6 @@ func main() {
 				return
 			}
 			writeJSON(w, http.StatusAccepted, map[string]any{"started": true, "startedAt": startedAt.UnixMilli()})
-		})
-
-		// Debug takes a stay ID rather than a URL, so the endpoint can only ever
-		// fetch the eight itinerary pages — it is not an open proxy.
-		mux.HandleFunc("GET /api/quotes/debug", func(w http.ResponseWriter, r *http.Request) {
-			spec, ok := quotes.StayByID(r.URL.Query().Get("id"))
-			if !ok {
-				writeJSON(w, http.StatusNotFound, map[string]string{"error": "id de hospedagem desconhecido"})
-				return
-			}
-			ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
-			defer cancel()
-			writeJSON(w, http.StatusOK, refresher.fetcher.Probe(ctx, quotes.SearchURL(spec)))
 		})
 	}
 
@@ -402,18 +392,6 @@ func (qr *quoteRefresher) nextAllowed() time.Time {
 	return qr.last.Add(quoteCooldown)
 }
 
-// loop refreshes on startup and then on a fixed interval.
-func (qr *quoteRefresher) loop() {
-	// Let the server bind and start serving before the first outbound fetch.
-	time.Sleep(15 * time.Second)
-	for {
-		if _, _, ok := qr.start(); !ok {
-			log.Printf("quotes: refresh ja em andamento, pulando ciclo")
-		}
-		time.Sleep(quoteInterval)
-	}
-}
-
 func (qr *quoteRefresher) run() {
 	defer func() {
 		qr.mu.Lock()
@@ -428,13 +406,14 @@ func (qr *quoteRefresher) run() {
 			time.Sleep(quoteSpacing)
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		// Matches the Fetcher's own 45s client timeout.
+		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 		q := qr.fetcher.Fetch(ctx, spec)
 		cancel()
 
 		if q.Err != "" {
 			failed++
-			log.Printf("quotes: %s: %s", spec.ID, q.Err)
+			log.Printf("quotes: %s (%s): %s", spec.ID, quotes.RedactedURL(spec), q.Err)
 		} else {
 			ok++
 		}

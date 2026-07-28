@@ -1,76 +1,34 @@
-// Package quotes fetches nightly hotel prices from Booking.com search pages.
-//
-// The site is static, so a price baked into the HTML would go stale within
-// hours. Instead the server refetches on a schedule and the page reads the
-// cached result — every quote carries the timestamp it was captured at, and a
-// failed fetch leaves the existing deep link as the fallback.
+// Package quotes prices the trip's 8 hotel stays via SerpApi's Google Hotels
+// engine — a real, documented JSON API. This replaces an earlier version that
+// scraped Booking.com's search page directly: Booking renders its results via
+// client-side JS, so a plain HTTP fetch almost never saw a real price no
+// matter how well it mimicked a browser. SerpApi does the rendering on its
+// end and hands back structured JSON instead.
 package quotes
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 )
 
-// maxBody caps how much of a search page we read; prices sit well within the
-// first chunk and Booking pages run to several MB of tracking markup.
-const maxBody = 3 * 1024 * 1024
+// maxBody caps how much of a response we read.
+const maxBody = 10 * 1024 * 1024
 
 // Spec describes one hotel stay to price.
 type Spec struct {
 	ID       string
-	Label    string
+	Label    string // search text sent to SerpApi, e.g. "Sana Rex Hotel Lisboa"
 	City     string
 	Checkin  string
 	Checkout string
 	Adults   int
 	Rooms    int
-}
-
-// Quote is the result of pricing a Spec. Price is empty when the fetch or the
-// parse failed, in which case Err says why.
-type Quote struct {
-	ID       string `json:"id"`
-	Label    string `json:"label"`
-	City     string `json:"city"`
-	Price    string `json:"price,omitempty"`
-	Nights   int    `json:"nights,omitempty"`
-	URL      string `json:"url"`
-	Source   string `json:"source"`
-	Strategy string `json:"strategy,omitempty"`
-	Err      string `json:"error,omitempty"`
-	Ts       int64  `json:"ts"`
-}
-
-// Fetcher prices Specs against Booking.com.
-type Fetcher struct {
-	client *http.Client
-}
-
-func NewFetcher() *Fetcher {
-	return &Fetcher{
-		client: &http.Client{Timeout: 25 * time.Second},
-	}
-}
-
-// SearchURL builds the Booking.com search URL for a stay. It is also what the
-// page links to, so the button and the scraped price always agree.
-func SearchURL(s Spec) string {
-	q := url.Values{}
-	q.Set("ss", s.Label)
-	q.Set("checkin", s.Checkin)
-	q.Set("checkout", s.Checkout)
-	q.Set("group_adults", strconv.Itoa(s.Adults))
-	q.Set("no_rooms", strconv.Itoa(s.Rooms))
-	q.Set("group_children", "0")
-	q.Set("selected_currency", "BRL")
-	q.Set("lang", "pt-br")
-	return "https://www.booking.com/searchresults.html?" + q.Encode()
 }
 
 // Nights returns the stay length, or 0 if the dates don't parse.
@@ -86,95 +44,148 @@ func (s Spec) Nights() int {
 	return int(out.Sub(in).Hours() / 24)
 }
 
+// Quote is the result of pricing a Spec. Price is empty when the fetch or the
+// parse failed, in which case Err says why.
+type Quote struct {
+	ID     string `json:"id"`
+	Label  string `json:"label"`
+	City   string `json:"city"`
+	Price  string `json:"price,omitempty"`
+	Nights int    `json:"nights,omitempty"`
+	Source string `json:"source"`
+	Err    string `json:"error,omitempty"`
+	Ts     int64  `json:"ts"`
+}
+
+// Fetcher prices Specs against SerpApi's Google Hotels engine.
+type Fetcher struct {
+	client *http.Client
+	apiKey string
+}
+
+// NewFetcher builds a Fetcher. apiKey may be empty, in which case every Fetch
+// fails immediately — main.go only wires this up when SERPAPI_KEY is set.
+func NewFetcher(apiKey string) *Fetcher {
+	return &Fetcher{
+		client: &http.Client{Timeout: 45 * time.Second},
+		apiKey: apiKey,
+	}
+}
+
+type hotelProperty struct {
+	Name      string `json:"name"`
+	TotalRate struct {
+		ExtractedLowest float64 `json:"extracted_lowest"`
+	} `json:"total_rate"`
+	RatePerNight struct {
+		ExtractedLowest float64 `json:"extracted_lowest"`
+	} `json:"rate_per_night"`
+}
+
+type hotelsResponse struct {
+	Properties []hotelProperty `json:"properties"`
+	Error      string          `json:"error"`
+}
+
+// buildURL includes the API key and must never be logged — RedactedURL is the
+// safe version for that.
+func (f *Fetcher) buildURL(s Spec) string {
+	q := baseParams(s)
+	q.Set("api_key", f.apiKey)
+	return "https://serpapi.com/search.json?" + q.Encode()
+}
+
+// RedactedURL is the same request with the API key omitted, safe for logs.
+func RedactedURL(s Spec) string {
+	return "https://serpapi.com/search.json?" + baseParams(s).Encode()
+}
+
+func baseParams(s Spec) url.Values {
+	q := url.Values{}
+	q.Set("engine", "google_hotels")
+	q.Set("q", s.Label)
+	q.Set("check_in_date", s.Checkin)
+	q.Set("check_out_date", s.Checkout)
+	q.Set("adults", strconv.Itoa(s.Adults))
+	q.Set("currency", "BRL")
+	q.Set("hl", "pt-br")
+	q.Set("gl", "br")
+	return q
+}
+
 // Fetch prices a single stay. It always returns a Quote: on failure the Quote
-// carries Err and an empty Price, so the caller can cache the attempt and the
-// page can fall back to the plain link.
+// carries Err and an empty Price, so the caller can cache the attempt.
 func (f *Fetcher) Fetch(ctx context.Context, s Spec) Quote {
 	q := Quote{
 		ID:     s.ID,
 		Label:  s.Label,
 		City:   s.City,
 		Nights: s.Nights(),
-		URL:    SearchURL(s),
-		Source: "booking",
+		Source: "serpapi-google-hotels",
 		Ts:     time.Now().UnixMilli(),
 	}
 
-	body, err := f.get(ctx, q.URL)
+	if f.apiKey == "" {
+		q.Err = "SERPAPI_KEY nao configurada"
+		return q
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, f.buildURL(s), nil)
 	if err != nil {
 		q.Err = err.Error()
 		return q
 	}
 
-	price, strategy := ExtractPrice(body)
-	if price == "" {
-		if looksBlocked(body) {
-			q.Err = "booking respondeu com pagina de verificacao (anti-bot)"
-		} else {
-			q.Err = "preco nao encontrado no HTML"
-		}
-		return q
-	}
-
-	q.Price = price
-	q.Strategy = strategy
-	return q
-}
-
-// Probe fetches a URL and reports what came back, without parsing. It backs the
-// debug endpoint: when a selector stops matching, this is what tells us whether
-// the page was blocked, redirected, or simply restructured.
-func (f *Fetcher) Probe(ctx context.Context, target string) map[string]any {
-	out := map[string]any{"url": target}
-
-	body, err := f.get(ctx, target)
-	if err != nil {
-		out["error"] = err.Error()
-		return out
-	}
-
-	price, strategy := ExtractPrice(body)
-	out["bytes"] = len(body)
-	out["blocked_markers"] = looksBlocked(body)
-	out["price"] = price
-	out["strategy"] = strategy
-	out["snippet"] = snippet(body, 1200)
-	return out
-}
-
-func (f *Fetcher) get(ctx context.Context, target string) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
-	if err != nil {
-		return "", err
-	}
-
-	// Booking serves a stripped page to obvious bots; a plain browser header set
-	// is enough to get the normal server-rendered results.
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-	req.Header.Set("Accept-Language", "pt-BR,pt;q=0.9,en;q=0.8")
-	req.Header.Set("Cache-Control", "no-cache")
-
 	resp, err := f.client.Do(req)
 	if err != nil {
-		return "", err
+		q.Err = "falha ao contatar a SerpApi"
+		return q
 	}
 	defer resp.Body.Close()
 
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, maxBody))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxBody))
 	if err != nil {
-		return "", err
+		q.Err = "falha ao ler resposta da SerpApi"
+		return q
 	}
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("http %d", resp.StatusCode)
+		q.Err = fmt.Sprintf("serpapi respondeu http %d: %s", resp.StatusCode, snippet(body, 300))
+		return q
 	}
-	return string(raw), nil
+
+	var parsed hotelsResponse
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		q.Err = fmt.Sprintf("resposta da serpapi em formato inesperado (%s): %s", err.Error(), snippet(body, 300))
+		return q
+	}
+	if parsed.Error != "" {
+		q.Err = "serpapi: " + parsed.Error
+		return q
+	}
+	if len(parsed.Properties) == 0 {
+		q.Err = "serpapi nao encontrou esse hotel para essas datas"
+		return q
+	}
+
+	// The search text is the specific hotel + city, so Google's own ranking
+	// puts the matching property first — no separate name-matching needed.
+	top := parsed.Properties[0]
+	best := top.TotalRate.ExtractedLowest
+	if best <= 0 && q.Nights > 0 {
+		best = top.RatePerNight.ExtractedLowest * float64(q.Nights)
+	}
+	if best <= 0 {
+		q.Err = "serpapi nao retornou um preco valido"
+		return q
+	}
+
+	q.Price = fmt.Sprintf("%.0f", best)
+	return q
 }
 
-func snippet(body string, n int) string {
-	body = strings.TrimSpace(body)
+func snippet(body []byte, n int) string {
 	if len(body) <= n {
-		return body
+		return string(body)
 	}
-	return body[:n]
+	return string(body[:n])
 }

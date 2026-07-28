@@ -102,43 +102,28 @@ git commit -m "sua mensagem"
 git push
 ```
 
-## Cotação automática dos hotéis
+## Cotação de hotel (manual)
 
-O servidor busca sozinho o preço de cada hospedagem do roteiro na página de
-busca do Booking.com (2 adultos, 1 quarto, nas datas do card) e guarda o
-resultado no `trip.json`. A página lê esse cache e mostra o preço junto dos
-botões, com a hora em que foi capturado — preço de hotel envelhece rápido, e
-uma cotação sem data seria pior que nenhuma.
+Usa a mesma SerpApi da cotação de voo (engine `google_hotels`) pra cotar as 8
+hospedagens do roteiro (2 adultos, nas datas do card) e guarda o resultado no
+`trip.json`. A página lê esse cache e mostra o preço junto dos botões, com a
+hora em que foi capturado e qual buscador achou — preço de hotel envelhece
+rápido, e uma cotação sem data seria pior que nenhuma.
 
-Se a busca falhar (site fora do ar, layout novo, bloqueio anti-bot), o card
-mostra "sem cotação" e o botão de link continua funcionando exatamente como
-antes — nada se perde.
+Antes disso o servidor raspava o HTML do Booking.com diretamente — trocado
+porque o Booking renderiza o preço via JavaScript no navegador, então uma
+busca simples quase nunca via um preço de verdade (dava "sem cotação" quase
+sempre).
 
-- Atualiza sozinho a cada 12h, começando 15s depois que o app sobe.
-- Botão **"Atualizar cotações"** no topo força uma rodada (limite: 1 a cada
-  10 min).
-- As 8 hospedagens são buscadas com 5s de intervalo entre elas.
+Assim como o voo, essa cotação **não roda sozinha**: as 8 hospedagens dividem
+a mesma cota mensal da SerpApi que o voo usa, e uma rodada completa já gasta
+8 buscas. Botão **"Atualizar cotações"** força uma rodada, limitada a uma a
+cada 3h; as 8 hospedagens são buscadas com 5s de intervalo entre elas.
 
 | Variável | Efeito |
 |---|---|
-| `QUOTES_ENABLED=0` | desliga a cotação; o site volta a ser só links |
-
-### Quando o preço parar de aparecer
-
-O Booking muda o HTML de tempos em tempos. O parser tenta várias estratégias
-em ordem (`data-testid` exato → qualquer `data-testid` com "price" →
-`aria-label` → texto puro), mas se todas falharem, use o endpoint de
-diagnóstico pra ver o que chegou:
-
-```bash
-curl -s 'https://viagem.fbtax.cloud/api/quotes/debug?id=lisboa' | head -c 2000
-```
-
-Ele mostra o tamanho da resposta, se veio página de captcha, qual estratégia
-casou (se alguma) e o começo do HTML. O campo `id` aceita só os IDs do
-roteiro (`lisboa`, `porto`, `coruna`, `madrid`, `granada`, `torremolinos`,
-`sevilha`, `salamanca`) — nunca uma URL arbitrária, pra não transformar o
-servidor em proxy aberto.
+| `SERPAPI_KEY` | (mesma do voo) sem ela, a cotação de hotel some do site |
+| `QUOTES_ENABLED=0` | desliga só a cotação de hotel, mesmo com a chave configurada |
 
 > As datas das hospedagens vivem em dois lugares: nos cards do
 > `web/index.html` e na tabela `Stays` do `internal/quotes/trip.go`. Um teste
@@ -148,15 +133,15 @@ servidor em proxy aberto.
 ## Cotação de passagem aérea (ida e volta Goiânia↔Lisboa)
 
 Usa a SerpApi (engine `google_flights`) — uma API de verdade, não scraping —
-pra cotar o trecho aéreo (2 passageiros). Diferente dos hotéis, essa cotação
-**não roda sozinha**: o plano gratuito da SerpApi é uma cota mensal
-compartilhada e cada cotação de ida-e-volta gasta duas buscas (ida, depois
-volta), então só acontece quando alguém clica em **"Cotar passagem"**, com um
-cooldown de 1h entre cliques.
+pra cotar o trecho aéreo (2 passageiros). Essa cotação **não roda sozinha**
+(mesmo motivo da de hotel, logo acima: a cota é compartilhada entre as duas) e
+cada cotação de ida-e-volta gasta duas buscas (ida, depois volta com o
+`departure_token`), então só acontece quando alguém clica em **"Cotar
+passagem"**, com um cooldown de 1h entre cliques.
 
 | Variável | Efeito |
 |---|---|
-| `SERPAPI_KEY` | chave da SerpApi — sem ela, a seção de voo some do site (nenhum erro, só fica desligada) |
+| `SERPAPI_KEY` | chave da SerpApi (mesma da cotação de hotel) — sem ela, a seção de voo some do site (nenhum erro, só fica desligada) |
 
 Pegue a chave em [serpapi.com](https://serpapi.com) (tem plano gratuito) e
 cadastre `SERPAPI_KEY` nas variáveis de ambiente do Coolify, junto das outras.

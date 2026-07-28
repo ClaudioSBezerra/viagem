@@ -1416,7 +1416,7 @@
 
     const total = document.querySelectorAll('[data-quote]').length;
     if(!Object.keys(quotes).length){
-      statusText.textContent = 'Nenhuma cotação ainda — o servidor busca sozinho a cada 12h.';
+      statusText.textContent = 'Ainda sem cotação — clique em "Atualizar cotações" (cota compartilhada, use com moderação).';
     }else{
       statusText.textContent = countPriced(quotes) + ' de ' + total + ' hospedagens com preço.';
     }
@@ -1430,7 +1430,7 @@
         let wait = 0;
         try{ wait = (await res.json()).retryAfter || 0; }catch(e){}
         statusText.textContent = 'Cotação recente demais — tente de novo em ' +
-                                 Math.ceil(wait / 60) + ' min.';
+                                 Math.ceil(wait / 3600) + 'h.';
         btn.disabled = false;
         return;
       }
