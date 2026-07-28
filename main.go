@@ -113,11 +113,31 @@ func main() {
 			return
 		}
 
-		p := store.Photo{Name: name, City: city, URL: url, Ts: time.Now().UnixMilli()}
+		p := store.Photo{ID: randomHex(8), Name: name, City: city, URL: url, Ts: time.Now().UnixMilli()}
 		if err := s.AddPhoto(p); err != nil {
 			log.Printf("add photo: %v", err)
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "falha ao salvar"})
 			return
+		}
+		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+	})
+
+	mux.HandleFunc("DELETE /api/photos/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		p, found, err := s.DeletePhoto(id)
+		if err != nil {
+			log.Printf("delete photo: %v", err)
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "falha ao apagar"})
+			return
+		}
+		if !found {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "foto nao encontrada"})
+			return
+		}
+		if name, ok := strings.CutPrefix(p.URL, "/uploads/"); ok {
+			if err := os.Remove(filepath.Join(uploadsDir, name)); err != nil && !os.IsNotExist(err) {
+				log.Printf("remove upload file: %v", err)
+			}
 		}
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 	})
@@ -173,7 +193,7 @@ func main() {
 			return
 		}
 
-		p := store.Photo{Name: name, City: city, URL: "/uploads/" + filename, Ts: time.Now().UnixMilli()}
+		p := store.Photo{ID: randomHex(8), Name: name, City: city, URL: "/uploads/" + filename, Ts: time.Now().UnixMilli()}
 		if err := s.AddPhoto(p); err != nil {
 			log.Printf("add photo: %v", err)
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "falha ao salvar"})

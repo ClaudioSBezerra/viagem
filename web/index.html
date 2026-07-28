@@ -374,9 +374,20 @@
     gap:0.8rem;
   }
   .photo-card{
+    position:relative;
     background:var(--paper); border-radius:10px; overflow:hidden;
     box-shadow:var(--shadow);
   }
+  .photo-del{
+    position:absolute; top:0.4rem; right:0.4rem; z-index:1;
+    width:24px; height:24px; border-radius:50%;
+    background:rgba(15,29,36,0.65); color:var(--paper);
+    border:none; cursor:pointer;
+    font-size:1rem; line-height:1; font-weight:600;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .photo-del:hover{background:var(--rust);}
+  .photo-del:disabled{opacity:0.5; cursor:wait;}
   .photo-card img{
     width:100%; height:140px; object-fit:cover; display:block;
     background:var(--night-2);
@@ -870,6 +881,7 @@
     }
     grid.innerHTML = photos.slice().reverse().map(p => `
       <div class="photo-card">
+        <button class="photo-del" data-id="${escapeHtml(p.id)}" title="Apagar foto" aria-label="Apagar foto">×</button>
         <img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.city)}" loading="lazy" onerror="this.style.display='none'">
         <div class="meta">
           <span class="who">${escapeHtml(p.name)}</span>
@@ -885,6 +897,21 @@
     }catch(e){
       document.getElementById('gallery-grid').innerHTML = '<div class="empty-state">Não consegui carregar a galeria agora.</div>';
     }
+
+    document.getElementById('gallery-grid').addEventListener('click', async (e) => {
+      const btn = e.target.closest('.photo-del');
+      if(!btn) return;
+      if(!confirm('Apagar esta foto pra todo mundo?')) return;
+      btn.disabled = true;
+      try{
+        const res = await fetch('/api/photos/' + encodeURIComponent(btn.dataset.id), { method: 'DELETE' });
+        if(!res.ok) throw new Error('Não consegui apagar agora.');
+        renderGallery(await api('/api/photos'));
+      }catch(err){
+        alert(err.message || 'Não consegui apagar agora.');
+        btn.disabled = false;
+      }
+    });
 
     const form = document.getElementById('photo-form');
     form.addEventListener('submit', async (e) => {

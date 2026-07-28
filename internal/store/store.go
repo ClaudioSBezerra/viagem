@@ -11,6 +11,7 @@ import (
 const maxEntries = 1000
 
 type Photo struct {
+	ID   string `json:"id"`
 	Name string `json:"name"`
 	City string `json:"city"`
 	URL  string `json:"url"`
@@ -69,6 +70,23 @@ func (s *Store) AddPhoto(p Photo) error {
 		s.data.Photos = s.data.Photos[len(s.data.Photos)-maxEntries:]
 	}
 	return s.saveLocked()
+}
+
+// DeletePhoto removes the photo with the given ID, returning it and true if found.
+func (s *Store) DeletePhoto(id string) (Photo, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i, p := range s.data.Photos {
+		if p.ID == id {
+			s.data.Photos = append(s.data.Photos[:i], s.data.Photos[i+1:]...)
+			if err := s.saveLocked(); err != nil {
+				return Photo{}, false, err
+			}
+			return p, true, nil
+		}
+	}
+	return Photo{}, false, nil
 }
 
 func (s *Store) ListMessages() []Message {
