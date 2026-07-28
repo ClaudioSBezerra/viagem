@@ -1432,8 +1432,15 @@
 
       /* A busca roda em background no servidor (8 hospedagens, espaçadas),
          então a página relê o cache até toda cotação ter sido refeita depois
-         deste clique — ou até estourar o teto de tentativas. */
-      const startedAt = Date.now();
+         deste clique — ou até estourar o teto de tentativas. startedAt vem do
+         servidor (mesmo relógio que carimba cada Quote.ts): comparar com o
+         relógio do navegador travava o contador sempre que os dois relógios
+         não batiam exatamente. */
+      let startedAt = Date.now();
+      try{
+        const data = await res.json();
+        if(typeof data.startedAt === 'number') startedAt = data.startedAt;
+      }catch(e){}
       for(let i = 0; i < 40; i++){
         await new Promise(r => setTimeout(r, 4000));
         let updated;

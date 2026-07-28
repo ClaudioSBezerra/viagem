@@ -237,14 +237,15 @@ func main() {
 		// Refresh runs in the background: pricing eight stays takes far longer
 		// than the server's write timeout, so the request only kicks it off.
 		mux.HandleFunc("POST /api/quotes/refresh", func(w http.ResponseWriter, r *http.Request) {
-			if wait, ok := refresher.start(); !ok {
+			startedAt, wait, ok := refresher.start()
+			if !ok {
 				writeJSON(w, http.StatusTooManyRequests, map[string]any{
 					"error":      "cotacao recente demais, aguarde",
 					"retryAfter": int(wait.Seconds()),
 				})
 				return
 			}
-			writeJSON(w, http.StatusAccepted, map[string]bool{"started": true})
+			writeJSON(w, http.StatusAccepted, map[string]any{"started": true, "startedAt": startedAt.UnixMilli()})
 		})
 
 		// Debug takes a stay ID rather than a URL, so the endpoint can only ever
@@ -332,21 +333,26 @@ type quoteRefresher struct {
 }
 
 // start begins a refresh unless one is running or the cooldown has not
-// elapsed, in which case it reports how long is left.
-func (qr *quoteRefresher) start() (time.Duration, bool) {
+// elapsed, in which case it reports how long is left. On success it also
+// returns the server's own clock reading for the start of this run — the
+// caller echoes it back to the client, which must compare it against Quote.Ts
+// (also server time) instead of its own clock. Comparing a browser's Date.now()
+// against a server timestamp breaks under any clock drift between the two.
+func (qr *quoteRefresher) start() (time.Time, time.Duration, bool) {
 	qr.mu.Lock()
 	defer qr.mu.Unlock()
 
 	if qr.running {
-		return quoteCooldown, false
+		return time.Time{}, quoteCooldown, false
 	}
 	if wait := time.Until(qr.last.Add(quoteCooldown)); wait > 0 {
-		return wait, false
+		return time.Time{}, wait, false
 	}
 
+	startedAt := time.Now()
 	qr.running = true
 	go qr.run()
-	return 0, true
+	return startedAt, 0, true
 }
 
 func (qr *quoteRefresher) nextAllowed() time.Time {
@@ -360,7 +366,7 @@ func (qr *quoteRefresher) loop() {
 	// Let the server bind and start serving before the first outbound fetch.
 	time.Sleep(15 * time.Second)
 	for {
-		if _, ok := qr.start(); !ok {
+		if _, _, ok := qr.start(); !ok {
 			log.Printf("quotes: refresh ja em andamento, pulando ciclo")
 		}
 		time.Sleep(quoteInterval)
