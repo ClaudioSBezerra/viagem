@@ -83,6 +83,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to open store at %s: %v", dbPath, err)
 	}
+	// If this prints all zeros on every deploy instead of just the first one,
+	// the persistent volume at DB_PATH's directory isn't actually persisting
+	// between deploys — check the Coolify Storages tab, not the storage
+	// format (a database would lose data the same way if the volume itself
+	// isn't kept).
+	log.Printf("store: carregado de %s (%d fotos, %d mensagens, %d cotacoes de hotel, %d cotacoes de voo)",
+		dbPath, len(s.ListPhotos()), len(s.ListMessages()), len(s.ListQuotes()), len(s.ListFlightQuotes()))
 
 	driveClient, err := drivesync.New(context.Background(),
 		os.Getenv("GOOGLE_CLIENT_ID"),
