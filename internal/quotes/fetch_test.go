@@ -127,3 +127,61 @@ func TestProbeReportsWhatCameBack(t *testing.T) {
 		t.Error("snippet should carry the page start for debugging")
 	}
 }
+
+// A refresh that fails must not erase a price that was already captured —
+// losing every price to one blocked burst is the failure this guards against.
+func TestMergeKeepsGoodPriceWhenRefreshFails(t *testing.T) {
+	prev := Quote{ID: "lisboa", Price: "R$ 2.480", Strategy: "data-testid-exact", Ts: 1000, CheckedTs: 1000}
+	next := Quote{ID: "lisboa", Err: "http 403", Ts: 5000, CheckedTs: 5000}
+
+	got := Merge(prev, next)
+	if got.Price != "R$ 2.480" {
+		t.Errorf("Price = %q, want the earlier price kept", got.Price)
+	}
+	if got.Ts != 1000 {
+		t.Errorf("Ts = %d, want 1000 — the price was captured then, not now", got.Ts)
+	}
+	if got.CheckedTs != 5000 {
+		t.Errorf("CheckedTs = %d, want 5000 — the attempt did happen", got.CheckedTs)
+	}
+	if got.Err != "http 403" {
+		t.Errorf("Err = %q, want the failure recorded", got.Err)
+	}
+	if got.Strategy != "data-testid-exact" {
+		t.Errorf("Strategy = %q, want it preserved with the price", got.Strategy)
+	}
+}
+
+func TestMergeTakesFreshPrice(t *testing.T) {
+	prev := Quote{ID: "lisboa", Price: "R$ 2.480", Ts: 1000}
+	next := Quote{ID: "lisboa", Price: "R$ 2.190", Ts: 5000, CheckedTs: 5000}
+
+	got := Merge(prev, next)
+	if got.Price != "R$ 2.190" || got.Ts != 5000 {
+		t.Errorf("got price %q at ts %d, want the fresh R$ 2.190 at 5000", got.Price, got.Ts)
+	}
+	if got.Err != "" {
+		t.Errorf("Err = %q, want it cleared on success", got.Err)
+	}
+}
+
+func TestMergeKeepsFailureWhenNothingCached(t *testing.T) {
+	next := Quote{ID: "lisboa", Err: "http 403", Ts: 5000, CheckedTs: 5000}
+
+	got := Merge(Quote{}, next)
+	if got.Price != "" || got.Err != "http 403" {
+		t.Errorf("got %+v, want the failure recorded as-is", got)
+	}
+}
+
+func TestFetchStampsBothTimestamps(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`<html><body><div data-testid="price-and-discounted-price">R$ 2.480</div></body></html>`))
+	}))
+	defer srv.Close()
+
+	q := newTestFetcher(srv).Fetch(context.Background(), lisboa)
+	if q.Ts == 0 || q.CheckedTs == 0 {
+		t.Errorf("Ts = %d, CheckedTs = %d, both should be stamped", q.Ts, q.CheckedTs)
+	}
+}

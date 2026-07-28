@@ -275,6 +275,12 @@
     opacity:.75;
   }
   .quote-badge.err .val{color:var(--ink); font-weight:600;}
+  /* Preço válido, mas a última tentativa de atualizar falhou. */
+  .quote-badge.stale{
+    background:rgba(176,120,0,0.10);
+    border-color:rgba(176,120,0,0.35);
+  }
+  .quote-badge.stale .val{color:#8a5b00;}
 
   /* display:flex sobrepõe o atributo hidden, que age via display:none do
      navegador — sem esta regra a barra aparece com as cotações desligadas. */
@@ -1367,10 +1373,17 @@
       }
       if(q.price){
         const nights = q.nights ? ' · ' + q.nights + (q.nights > 1 ? ' noites' : ' noite') : '';
-        badge.className = 'quote-badge';
-        badge.removeAttribute('title');
+        /* Um preço guardado cuja última tentativa falhou continua valendo —
+           só avisamos que não foi possível confirmar agora. */
+        badge.className = q.error ? 'quote-badge stale' : 'quote-badge';
+        if(q.error){
+          badge.title = 'Não consegui atualizar agora (' + q.error + '). Preço da última busca que funcionou.';
+        }else{
+          badge.removeAttribute('title');
+        }
         badge.innerHTML = '<span class="val">' + escapeHtml(q.price) + '</span>' +
-                          '<span class="when">' + escapeHtml(timeAgo(q.ts) + nights) + '</span>';
+                          '<span class="when">' + escapeHtml(timeAgo(q.ts) + nights) +
+                          (q.error ? ' ⚠️' : '') + '</span>';
       }else{
         badge.className = 'quote-badge err';
         badge.title = q.error || 'sem detalhes';
@@ -1442,7 +1455,9 @@
         }catch(e){
           continue;
         }
-        const done = Object.values(updated).filter(q => q.ts >= startedAt).length;
+        /* checkedTs, não ts: numa falha o preço antigo é mantido com o ts
+           original, então só checkedTs marca que a tentativa aconteceu. */
+        const done = Object.values(updated).filter(q => (q.checkedTs || q.ts) >= startedAt).length;
         if(done >= total){
           break;
         }

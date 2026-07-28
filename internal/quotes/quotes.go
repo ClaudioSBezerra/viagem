@@ -34,17 +34,38 @@ type Spec struct {
 
 // Quote is the result of pricing a Spec. Price is empty when the fetch or the
 // parse failed, in which case Err says why.
+//
+// Ts and CheckedTs differ on purpose: Ts is when the price now held was
+// captured, CheckedTs is when we last tried. A stay that priced fine this
+// morning and failed to refresh since keeps the morning price and Ts, with a
+// recent CheckedTs and an Err explaining the failed attempt.
 type Quote struct {
-	ID       string `json:"id"`
-	Label    string `json:"label"`
-	City     string `json:"city"`
-	Price    string `json:"price,omitempty"`
-	Nights   int    `json:"nights,omitempty"`
-	URL      string `json:"url"`
-	Source   string `json:"source"`
-	Strategy string `json:"strategy,omitempty"`
-	Err      string `json:"error,omitempty"`
-	Ts       int64  `json:"ts"`
+	ID        string `json:"id"`
+	Label     string `json:"label"`
+	City      string `json:"city"`
+	Price     string `json:"price,omitempty"`
+	Nights    int    `json:"nights,omitempty"`
+	URL       string `json:"url"`
+	Source    string `json:"source"`
+	Strategy  string `json:"strategy,omitempty"`
+	Err       string `json:"error,omitempty"`
+	Ts        int64  `json:"ts"`
+	CheckedTs int64  `json:"checkedTs,omitempty"`
+}
+
+// Merge folds a fresh attempt into what was already cached. A failed attempt
+// must never erase a good price: Booking blocks bursts, so one refused refresh
+// would otherwise wipe every price the site had — which is exactly what a
+// visitor pressing the refresh button used to cause.
+func Merge(prev, next Quote) Quote {
+	if next.Price != "" || prev.Price == "" {
+		return next
+	}
+
+	kept := prev
+	kept.CheckedTs = next.CheckedTs
+	kept.Err = next.Err
+	return kept
 }
 
 // Fetcher prices Specs against Booking.com.
@@ -90,14 +111,16 @@ func (s Spec) Nights() int {
 // carries Err and an empty Price, so the caller can cache the attempt and the
 // page can fall back to the plain link.
 func (f *Fetcher) Fetch(ctx context.Context, s Spec) Quote {
+	now := time.Now().UnixMilli()
 	q := Quote{
-		ID:     s.ID,
-		Label:  s.Label,
-		City:   s.City,
-		Nights: s.Nights(),
-		URL:    SearchURL(s),
-		Source: "booking",
-		Ts:     time.Now().UnixMilli(),
+		ID:        s.ID,
+		Label:     s.Label,
+		City:      s.City,
+		Nights:    s.Nights(),
+		URL:       SearchURL(s),
+		Source:    "booking",
+		Ts:        now,
+		CheckedTs: now,
 	}
 
 	body, err := f.get(ctx, q.URL)

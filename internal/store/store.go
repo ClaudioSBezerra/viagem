@@ -121,16 +121,16 @@ func (s *Store) ListQuotes() map[string]quotes.Quote {
 	return out
 }
 
-// SetQuote caches one quote, replacing any earlier result for that stay. A
-// failed attempt is cached too, so the page can show why a price is missing
-// instead of silently rendering nothing.
+// SetQuote caches the result of one attempt, folding it into whatever was
+// already stored: a fresh price wins, and a failure keeps the last good price
+// while recording that the attempt failed (see quotes.Merge).
 func (s *Store) SetQuote(q quotes.Quote) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.data.Quotes == nil {
 		s.data.Quotes = make(map[string]quotes.Quote)
 	}
-	s.data.Quotes[q.ID] = q
+	s.data.Quotes[q.ID] = quotes.Merge(s.data.Quotes[q.ID], q)
 	return s.saveLocked()
 }
 
