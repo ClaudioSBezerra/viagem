@@ -255,6 +255,50 @@
   .actions a.btn-sm.decolar{background:#00AECD; color:#08202B;}
   .actions a.btn-sm.flights{background:#1a73e8; color:#fff;}
 
+  /* Cotação buscada pelo servidor e guardada em cache. */
+  .quote-badge{
+    display:inline-flex;
+    align-items:baseline;
+    gap:.4rem;
+    padding:.3rem .6rem;
+    border-radius:999px;
+    background:rgba(0,53,128,0.08);
+    border:1px solid rgba(0,53,128,0.25);
+    font-size:.82rem;
+    line-height:1.2;
+  }
+  .quote-badge .val{font-weight:700; color:#003580;}
+  .quote-badge .when{font-size:.72rem; opacity:.7;}
+  .quote-badge.err{
+    background:rgba(15,29,36,0.05);
+    border-color:rgba(15,29,36,0.18);
+    opacity:.75;
+  }
+  .quote-badge.err .val{color:var(--ink); font-weight:600;}
+
+  /* display:flex sobrepõe o atributo hidden, que age via display:none do
+     navegador — sem esta regra a barra aparece com as cotações desligadas. */
+  .quote-bar[hidden]{display:none;}
+  .quote-bar{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:.6rem;
+    margin-top:.6rem;
+    font-size:.85rem;
+  }
+  .quote-bar button{
+    padding:.35rem .8rem;
+    border-radius:999px;
+    border:1px solid rgba(0,53,128,0.35);
+    background:#003580;
+    color:#fff;
+    font:inherit;
+    font-size:.82rem;
+    cursor:pointer;
+  }
+  .quote-bar button[disabled]{opacity:.55; cursor:default;}
+
   .map-wrap{
     margin-top:1rem;
     border-radius:10px;
@@ -546,11 +590,11 @@
           <span class="label">Hotel</span>
           Sana Rex Hotel
         </div>
-        <div class="actions">
+        <div class="actions" data-quote="lisboa">
           <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Sana+Rex+Hotel+Lisboa" target="_blank" rel="noopener">Google Maps</a>
           <a class="btn-sm waze" href="https://waze.com/ul?q=Sana%20Rex%20Hotel%20Lisboa&navigate=yes" target="_blank" rel="noopener">Waze</a>
           <a class="btn-sm photos" href="https://www.google.com/search?q=Lisboa+Alfama+Belem&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
-          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Sana+Rex+Hotel+Lisboa&checkin=2026-10-15&checkout=2026-10-17&group_adults=8&no_rooms=4&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
+          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Sana+Rex+Hotel+Lisboa&checkin=2026-10-15&checkout=2026-10-17&group_adults=2&no_rooms=1&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
           <a class="btn-sm decolar" href="https://www.google.com/search?q=decolar+hoteis+Sana+Rex+Hotel+Lisboa" target="_blank" rel="noopener">💰 Cotar Decolar</a>
         </div>
         <details class="mapd">
@@ -613,11 +657,11 @@
           Bessahotel Boavista
         </div>
         <div class="note">Retirada do carro aqui, se ainda não retirado em Lisboa. Centro histórico é ruim para trânsito — deixem o carro no hotel e explorem a pé/metrô.</div>
-        <div class="actions">
+        <div class="actions" data-quote="porto">
           <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Bessahotel+Boavista+Porto" target="_blank" rel="noopener">Google Maps</a>
           <a class="btn-sm waze" href="https://waze.com/ul?q=Bessahotel%20Boavista%20Porto&navigate=yes" target="_blank" rel="noopener">Waze</a>
           <a class="btn-sm photos" href="https://www.google.com/search?q=Porto+Ribeira+Dom+Luis&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
-          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Bessahotel+Boavista+Porto&checkin=2026-10-17&checkout=2026-10-19&group_adults=8&no_rooms=4&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
+          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Bessahotel+Boavista+Porto&checkin=2026-10-17&checkout=2026-10-19&group_adults=2&no_rooms=1&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
           <a class="btn-sm decolar" href="https://www.google.com/search?q=decolar+hoteis+Bessahotel+Boavista+Porto" target="_blank" rel="noopener">💰 Cotar Decolar</a>
         </div>
         <details class="mapd">
@@ -681,11 +725,11 @@
           <span class="label">Hotel</span>
           Hesperia A Coruña Centro
         </div>
-        <div class="actions">
+        <div class="actions" data-quote="coruna">
           <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Hesperia+A+Coruna+Centro" target="_blank" rel="noopener">Google Maps</a>
           <a class="btn-sm waze" href="https://waze.com/ul?q=Hesperia%20A%20Coru%C3%B1a%20Centro&navigate=yes" target="_blank" rel="noopener">Waze</a>
           <a class="btn-sm photos" href="https://www.google.com/search?q=A+Coru%C3%B1a+Torre+de+Hercules&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
-          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Hesperia+A+Coru%C3%B1a+Centro&checkin=2026-10-19&checkout=2026-10-20&group_adults=8&no_rooms=4&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
+          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Hesperia+A+Coru%C3%B1a+Centro&checkin=2026-10-19&checkout=2026-10-20&group_adults=2&no_rooms=1&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
           <a class="btn-sm decolar" href="https://www.google.com/search?q=decolar+hoteis+Hesperia+A+Coru%C3%B1a+Centro" target="_blank" rel="noopener">💰 Cotar Decolar</a>
         </div>
         <details class="mapd">
@@ -750,11 +794,11 @@
           Hotel Madrid Centro Affiliated by Meliá
         </div>
         <div class="note">Hotel fica na Zona de Bajas Emisiones (Distrito Centro) — perguntem na recepção sobre autorização de acesso de carro antes de entrar na região.</div>
-        <div class="actions">
+        <div class="actions" data-quote="madrid">
           <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Hotel+Madrid+Centro+Affiliated+by+Melia" target="_blank" rel="noopener">Google Maps</a>
           <a class="btn-sm waze" href="https://waze.com/ul?q=Hotel%20Madrid%20Centro%20Melia&navigate=yes" target="_blank" rel="noopener">Waze</a>
           <a class="btn-sm photos" href="https://www.google.com/search?q=Madrid+Gran+Via+Palacio&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
-          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Hotel+Madrid+Centro+Melia&checkin=2026-10-20&checkout=2026-10-22&group_adults=8&no_rooms=4&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
+          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Hotel+Madrid+Centro+Affiliated+by+Melia&checkin=2026-10-20&checkout=2026-10-22&group_adults=2&no_rooms=1&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
           <a class="btn-sm decolar" href="https://www.google.com/search?q=decolar+hoteis+Hotel+Madrid+Centro+Affiliated+by+Melia" target="_blank" rel="noopener">💰 Cotar Decolar</a>
         </div>
         <details class="mapd">
@@ -818,11 +862,11 @@
           <span class="label">Hotel</span>
           Porcel Alixares
         </div>
-        <div class="actions">
+        <div class="actions" data-quote="granada">
           <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Porcel+Alixares+Granada" target="_blank" rel="noopener">Google Maps</a>
           <a class="btn-sm waze" href="https://waze.com/ul?q=Porcel%20Alixares%20Granada&navigate=yes" target="_blank" rel="noopener">Waze</a>
           <a class="btn-sm photos" href="https://www.google.com/search?q=Granada+Alhambra&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
-          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Porcel+Alixares+Granada&checkin=2026-10-22&checkout=2026-10-24&group_adults=8&no_rooms=4&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
+          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Porcel+Alixares+Granada&checkin=2026-10-22&checkout=2026-10-24&group_adults=2&no_rooms=1&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
           <a class="btn-sm decolar" href="https://www.google.com/search?q=decolar+hoteis+Porcel+Alixares+Granada" target="_blank" rel="noopener">💰 Cotar Decolar</a>
         </div>
         <details class="mapd">
@@ -886,11 +930,11 @@
           <span class="label">Hotel</span>
           Hotel Los Jazmines
         </div>
-        <div class="actions">
+        <div class="actions" data-quote="torremolinos">
           <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Hotel+Los+Jazmines+Torremolinos" target="_blank" rel="noopener">Google Maps</a>
           <a class="btn-sm waze" href="https://waze.com/ul?q=Hotel%20Los%20Jazmines%20Torremolinos&navigate=yes" target="_blank" rel="noopener">Waze</a>
           <a class="btn-sm photos" href="https://www.google.com/search?q=Torremolinos+Malaga+praia&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
-          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Hotel+Los+Jazmines+Torremolinos&checkin=2026-10-24&checkout=2026-10-27&group_adults=8&no_rooms=4&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
+          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Hotel+Los+Jazmines+Torremolinos&checkin=2026-10-24&checkout=2026-10-27&group_adults=2&no_rooms=1&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
           <a class="btn-sm decolar" href="https://www.google.com/search?q=decolar+hoteis+Hotel+Los+Jazmines+Torremolinos" target="_blank" rel="noopener">💰 Cotar Decolar</a>
         </div>
         <details class="mapd">
@@ -952,11 +996,11 @@
           <span class="label">Hotel</span>
           Duquesa Sevilla
         </div>
-        <div class="actions">
+        <div class="actions" data-quote="sevilha">
           <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Duquesa+Sevilla+Hotel" target="_blank" rel="noopener">Google Maps</a>
           <a class="btn-sm waze" href="https://waze.com/ul?q=Duquesa%20Sevilla%20Hotel&navigate=yes" target="_blank" rel="noopener">Waze</a>
           <a class="btn-sm photos" href="https://www.google.com/search?q=Sevilha+Plaza+de+Espana&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
-          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Duquesa+Sevilla+Hotel&checkin=2026-10-27&checkout=2026-10-29&group_adults=8&no_rooms=4&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
+          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Duquesa+Sevilla+Hotel&checkin=2026-10-27&checkout=2026-10-29&group_adults=2&no_rooms=1&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
           <a class="btn-sm decolar" href="https://www.google.com/search?q=decolar+hoteis+Duquesa+Sevilla+Hotel" target="_blank" rel="noopener">💰 Cotar Decolar</a>
         </div>
         <details class="mapd">
@@ -1018,11 +1062,11 @@
           <span class="label">Hotel</span>
           San Polo
         </div>
-        <div class="actions">
+        <div class="actions" data-quote="salamanca">
           <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Hotel+San+Polo+Salamanca" target="_blank" rel="noopener">Google Maps</a>
           <a class="btn-sm waze" href="https://waze.com/ul?q=Hotel%20San%20Polo%20Salamanca&navigate=yes" target="_blank" rel="noopener">Waze</a>
           <a class="btn-sm photos" href="https://www.google.com/search?q=Salamanca+Plaza+Mayor&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
-          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Hotel+San+Polo+Salamanca&checkin=2026-10-29&checkout=2026-10-31&group_adults=8&no_rooms=4&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
+          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Hotel+San+Polo+Salamanca&checkin=2026-10-29&checkout=2026-10-31&group_adults=2&no_rooms=1&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
           <a class="btn-sm decolar" href="https://www.google.com/search?q=decolar+hoteis+Hotel+San+Polo+Salamanca" target="_blank" rel="noopener">💰 Cotar Decolar</a>
         </div>
         <details class="mapd">
@@ -1105,6 +1149,10 @@
 
 <div class="live-note">
   <div class="box" id="live-status">🔄 Verificando conexão com o servidor…</div>
+  <div class="quote-bar" id="quote-bar" hidden>
+    <button type="button" id="quote-refresh">💰 Atualizar cotações</button>
+    <span id="quote-status"></span>
+  </div>
 </div>
 
 <div class="panel" id="galeria">
@@ -1292,6 +1340,122 @@
     }, 6000);
   }
 
+  /* ---------------- COTAÇÕES ---------------- */
+  /* Os preços são buscados pelo servidor e guardados em cache; a página só
+     lê o que já está salvo. Por isso cada cotação mostra quando foi capturada
+     — um preço de hotel envelhece em horas. */
+  function timeAgo(ts){
+    const mins = Math.round((Date.now() - ts) / 60000);
+    if(mins < 1) return 'agora';
+    if(mins < 60) return 'há ' + mins + ' min';
+    const hrs = Math.round(mins / 60);
+    if(hrs < 24) return 'há ' + hrs + 'h';
+    return 'há ' + Math.round(hrs / 24) + 'd';
+  }
+
+  function renderQuotes(quotes){
+    document.querySelectorAll('[data-quote]').forEach(el => {
+      const q = quotes[el.dataset.quote];
+      let badge = el.querySelector('.quote-badge');
+      if(!q){
+        if(badge) badge.remove();
+        return;
+      }
+      if(!badge){
+        badge = document.createElement('span');
+        el.appendChild(badge);
+      }
+      if(q.price){
+        const nights = q.nights ? ' · ' + q.nights + (q.nights > 1 ? ' noites' : ' noite') : '';
+        badge.className = 'quote-badge';
+        badge.removeAttribute('title');
+        badge.innerHTML = '<span class="val">' + escapeHtml(q.price) + '</span>' +
+                          '<span class="when">' + escapeHtml(timeAgo(q.ts) + nights) + '</span>';
+      }else{
+        badge.className = 'quote-badge err';
+        badge.title = q.error || 'sem detalhes';
+        badge.innerHTML = '<span class="val">sem cotação</span>' +
+                          '<span class="when">' + escapeHtml(timeAgo(q.ts)) + '</span>';
+      }
+    });
+  }
+
+  function countPriced(quotes){
+    return Object.values(quotes).filter(q => q.price).length;
+  }
+
+  async function initQuotes(){
+    const bar = document.getElementById('quote-bar');
+    const statusText = document.getElementById('quote-status');
+    const btn = document.getElementById('quote-refresh');
+
+    async function load(){
+      const data = await api('/api/quotes');
+      const quotes = data.quotes || {};
+      renderQuotes(quotes);
+      return quotes;
+    }
+
+    let quotes;
+    try{
+      quotes = await load();
+    }catch(e){
+      return; // cotações desligadas no servidor (QUOTES_ENABLED=0)
+    }
+    bar.hidden = false;
+
+    const total = document.querySelectorAll('[data-quote]').length;
+    if(!Object.keys(quotes).length){
+      statusText.textContent = 'Nenhuma cotação ainda — o servidor busca sozinho a cada 12h.';
+    }else{
+      statusText.textContent = countPriced(quotes) + ' de ' + total + ' hospedagens com preço.';
+    }
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      statusText.textContent = 'Buscando preços…';
+
+      const res = await fetch('/api/quotes/refresh', { method: 'POST' });
+      if(res.status === 429){
+        let wait = 0;
+        try{ wait = (await res.json()).retryAfter || 0; }catch(e){}
+        statusText.textContent = 'Cotação recente demais — tente de novo em ' +
+                                 Math.ceil(wait / 60) + ' min.';
+        btn.disabled = false;
+        return;
+      }
+      if(!res.ok){
+        statusText.textContent = 'Não consegui iniciar a busca agora.';
+        btn.disabled = false;
+        return;
+      }
+
+      /* A busca roda em background no servidor (8 hospedagens, espaçadas),
+         então a página relê o cache até toda cotação ter sido refeita depois
+         deste clique — ou até estourar o teto de tentativas. */
+      const startedAt = Date.now();
+      for(let i = 0; i < 40; i++){
+        await new Promise(r => setTimeout(r, 4000));
+        let updated;
+        try{
+          updated = await load();
+        }catch(e){
+          continue;
+        }
+        const done = Object.values(updated).filter(q => q.ts >= startedAt).length;
+        if(done >= total){
+          break;
+        }
+        statusText.textContent = 'Buscando… ' + done + ' de ' + total + ' atualizadas.';
+      }
+
+      try{
+        statusText.textContent = countPriced(await load()) + ' de ' + total + ' hospedagens com preço.';
+      }catch(e){}
+      btn.disabled = false;
+    });
+  }
+
   (async function boot(){
     try{
       await api('/api/photos');
@@ -1302,6 +1466,7 @@
     }
     initGallery();
     initChat();
+    initQuotes();
   })();
 })();
 </script>

@@ -102,6 +102,49 @@ git commit -m "sua mensagem"
 git push
 ```
 
+## Cotação automática dos hotéis
+
+O servidor busca sozinho o preço de cada hospedagem do roteiro na página de
+busca do Booking.com (2 adultos, 1 quarto, nas datas do card) e guarda o
+resultado no `trip.json`. A página lê esse cache e mostra o preço junto dos
+botões, com a hora em que foi capturado — preço de hotel envelhece rápido, e
+uma cotação sem data seria pior que nenhuma.
+
+Se a busca falhar (site fora do ar, layout novo, bloqueio anti-bot), o card
+mostra "sem cotação" e o botão de link continua funcionando exatamente como
+antes — nada se perde.
+
+- Atualiza sozinho a cada 12h, começando 15s depois que o app sobe.
+- Botão **"Atualizar cotações"** no topo força uma rodada (limite: 1 a cada
+  10 min).
+- As 8 hospedagens são buscadas com 5s de intervalo entre elas.
+
+| Variável | Efeito |
+|---|---|
+| `QUOTES_ENABLED=0` | desliga a cotação; o site volta a ser só links |
+
+### Quando o preço parar de aparecer
+
+O Booking muda o HTML de tempos em tempos. O parser tenta várias estratégias
+em ordem (`data-testid` exato → qualquer `data-testid` com "price" →
+`aria-label` → texto puro), mas se todas falharem, use o endpoint de
+diagnóstico pra ver o que chegou:
+
+```bash
+curl -s 'https://viagem.fbtax.cloud/api/quotes/debug?id=lisboa' | head -c 2000
+```
+
+Ele mostra o tamanho da resposta, se veio página de captcha, qual estratégia
+casou (se alguma) e o começo do HTML. O campo `id` aceita só os IDs do
+roteiro (`lisboa`, `porto`, `coruna`, `madrid`, `granada`, `torremolinos`,
+`sevilha`, `salamanca`) — nunca uma URL arbitrária, pra não transformar o
+servidor em proxy aberto.
+
+> As datas das hospedagens vivem em dois lugares: nos cards do
+> `web/index.html` e na tabela `Stays` do `internal/quotes/trip.go`. Um teste
+> (`go test ./internal/quotes/`) falha se as duas listas divergirem, então
+> ajuste sempre as duas.
+
 ## Backup dos dados
 
 ```bash

@@ -16,11 +16,13 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 	"unicode/utf8"
 
 	"viagem/internal/drivesync"
+	"viagem/internal/quotes"
 	"viagem/internal/store"
 )
 
@@ -30,6 +32,14 @@ var webFS embed.FS
 const (
 	maxBodyBytes   = 8 * 1024
 	maxUploadBytes = 15 * 1024 * 1024
+
+	// quoteInterval is how often prices are refreshed in the background, and
+	// quoteCooldown how long a manual refresh has to wait after the last run.
+	// Both are deliberately slack: eight stays priced twice a day is enough for
+	// planning, and hammering the search pages is what gets an IP blocked.
+	quoteInterval = 12 * time.Hour
+	quoteCooldown = 10 * time.Minute
+	quoteSpacing  = 5 * time.Second
 )
 
 var urlScheme = regexp.MustCompile(`(?i)^https?://`)
@@ -73,6 +83,15 @@ func main() {
 	indexPage, err := webFS.ReadFile("web/index.html")
 	if err != nil {
 		log.Fatalf("failed to load embedded index.html: %v", err)
+	}
+
+	quotesEnabled := envOr("QUOTES_ENABLED", "1") != "0"
+	refresher := &quoteRefresher{fetcher: quotes.NewFetcher(), store: s}
+	if quotesEnabled {
+		log.Printf("quotes: enabled (%d hospedagens, refresh a cada %s)", len(quotes.Stays), quoteInterval)
+		go refresher.loop()
+	} else {
+		log.Printf("quotes: disabled (QUOTES_ENABLED=0)")
 	}
 
 	mux := http.NewServeMux()
@@ -207,6 +226,41 @@ func main() {
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 	})
 
+	if quotesEnabled {
+		mux.HandleFunc("GET /api/quotes", func(w http.ResponseWriter, r *http.Request) {
+			writeJSON(w, http.StatusOK, map[string]any{
+				"quotes":    s.ListQuotes(),
+				"nextAfter": refresher.nextAllowed().UnixMilli(),
+			})
+		})
+
+		// Refresh runs in the background: pricing eight stays takes far longer
+		// than the server's write timeout, so the request only kicks it off.
+		mux.HandleFunc("POST /api/quotes/refresh", func(w http.ResponseWriter, r *http.Request) {
+			if wait, ok := refresher.start(); !ok {
+				writeJSON(w, http.StatusTooManyRequests, map[string]any{
+					"error":      "cotacao recente demais, aguarde",
+					"retryAfter": int(wait.Seconds()),
+				})
+				return
+			}
+			writeJSON(w, http.StatusAccepted, map[string]bool{"started": true})
+		})
+
+		// Debug takes a stay ID rather than a URL, so the endpoint can only ever
+		// fetch the eight itinerary pages — it is not an open proxy.
+		mux.HandleFunc("GET /api/quotes/debug", func(w http.ResponseWriter, r *http.Request) {
+			spec, ok := quotes.StayByID(r.URL.Query().Get("id"))
+			if !ok {
+				writeJSON(w, http.StatusNotFound, map[string]string{"error": "id de hospedagem desconhecido"})
+				return
+			}
+			ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+			defer cancel()
+			writeJSON(w, http.StatusOK, refresher.fetcher.Probe(ctx, quotes.SearchURL(spec)))
+		})
+	}
+
 	mux.HandleFunc("GET /api/chat", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, s.ListMessages())
 	})
@@ -238,10 +292,12 @@ func main() {
 	})
 
 	srv := &http.Server{
-		Addr:         addr,
-		Handler:      mux,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+		Addr:        addr,
+		Handler:     mux,
+		ReadTimeout: 10 * time.Second,
+		// The quote debug endpoint fetches a Booking page inline and can take
+		// tens of seconds; a 10s write deadline would truncate its response.
+		WriteTimeout: 60 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
@@ -261,6 +317,85 @@ func main() {
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Printf("shutdown error: %v", err)
 	}
+}
+
+// quoteRefresher prices every stay in the background and caches the results.
+// Only one run happens at a time, and runs are spaced by quoteCooldown, so a
+// visitor leaning on the refresh button cannot turn the site into a scraper.
+type quoteRefresher struct {
+	fetcher *quotes.Fetcher
+	store   *store.Store
+
+	mu      sync.Mutex
+	running bool
+	last    time.Time
+}
+
+// start begins a refresh unless one is running or the cooldown has not
+// elapsed, in which case it reports how long is left.
+func (qr *quoteRefresher) start() (time.Duration, bool) {
+	qr.mu.Lock()
+	defer qr.mu.Unlock()
+
+	if qr.running {
+		return quoteCooldown, false
+	}
+	if wait := time.Until(qr.last.Add(quoteCooldown)); wait > 0 {
+		return wait, false
+	}
+
+	qr.running = true
+	go qr.run()
+	return 0, true
+}
+
+func (qr *quoteRefresher) nextAllowed() time.Time {
+	qr.mu.Lock()
+	defer qr.mu.Unlock()
+	return qr.last.Add(quoteCooldown)
+}
+
+// loop refreshes on startup and then on a fixed interval.
+func (qr *quoteRefresher) loop() {
+	// Let the server bind and start serving before the first outbound fetch.
+	time.Sleep(15 * time.Second)
+	for {
+		if _, ok := qr.start(); !ok {
+			log.Printf("quotes: refresh ja em andamento, pulando ciclo")
+		}
+		time.Sleep(quoteInterval)
+	}
+}
+
+func (qr *quoteRefresher) run() {
+	defer func() {
+		qr.mu.Lock()
+		qr.running = false
+		qr.last = time.Now()
+		qr.mu.Unlock()
+	}()
+
+	var ok, failed int
+	for i, spec := range quotes.Stays {
+		if i > 0 {
+			time.Sleep(quoteSpacing)
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		q := qr.fetcher.Fetch(ctx, spec)
+		cancel()
+
+		if q.Err != "" {
+			failed++
+			log.Printf("quotes: %s: %s", spec.ID, q.Err)
+		} else {
+			ok++
+		}
+		if err := qr.store.SetQuote(q); err != nil {
+			log.Printf("quotes: cache %s: %v", spec.ID, err)
+		}
+	}
+	log.Printf("quotes: ciclo concluido (%d com preco, %d sem)", ok, failed)
 }
 
 func envOr(key, fallback string) string {

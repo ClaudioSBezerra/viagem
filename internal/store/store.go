@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"viagem/internal/quotes"
 )
 
 const maxEntries = 1000
@@ -25,8 +27,9 @@ type Message struct {
 }
 
 type data struct {
-	Photos   []Photo   `json:"photos"`
-	Messages []Message `json:"messages"`
+	Photos   []Photo                 `json:"photos"`
+	Messages []Message               `json:"messages"`
+	Quotes   map[string]quotes.Quote `json:"quotes,omitempty"`
 }
 
 type Store struct {
@@ -104,6 +107,30 @@ func (s *Store) AddMessage(m Message) error {
 	if len(s.data.Messages) > maxEntries {
 		s.data.Messages = s.data.Messages[len(s.data.Messages)-maxEntries:]
 	}
+	return s.saveLocked()
+}
+
+// ListQuotes returns the cached hotel quotes keyed by stay ID.
+func (s *Store) ListQuotes() map[string]quotes.Quote {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make(map[string]quotes.Quote, len(s.data.Quotes))
+	for k, v := range s.data.Quotes {
+		out[k] = v
+	}
+	return out
+}
+
+// SetQuote caches one quote, replacing any earlier result for that stay. A
+// failed attempt is cached too, so the page can show why a price is missing
+// instead of silently rendering nothing.
+func (s *Store) SetQuote(q quotes.Quote) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.data.Quotes == nil {
+		s.data.Quotes = make(map[string]quotes.Quote)
+	}
+	s.data.Quotes[q.ID] = q
 	return s.saveLocked()
 }
 
