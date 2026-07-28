@@ -179,7 +179,7 @@ func (f *Fetcher) Fetch(ctx context.Context, s Spec) Quote {
 		return q
 	}
 
-	q.Price = fmt.Sprintf("%.0f", best)
+	q.Price = fmt.Sprintf("R$ %.0f", best)
 	return q
 }
 

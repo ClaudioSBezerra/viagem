@@ -147,6 +147,15 @@ Pegue a chave em [serpapi.com](https://serpapi.com) (tem plano gratuito) e
 cadastre `SERPAPI_KEY` nas variáveis de ambiente do Coolify, junto das outras.
 Nunca coloque o valor da chave em nenhum arquivo do repositório.
 
+## Baixar PDF do roteiro
+
+Botão **"🖨️ Baixar PDF do roteiro"** no topo chama `window.print()` — sem
+geração no servidor, então o PDF sempre reflete o que está na tela no
+momento, cotações incluídas. Uma folha de estilo `@media print` some com o
+que não interessa no papel (formulários, chat, galeria, botões, mapas) e
+troca o tema escuro por preto-no-branco, deixando só voos, hotéis (com
+preço, se cotado) e o trecho de estrada com km/duração entre cada cidade.
+
 ## Backup dos dados
 
 ```bash

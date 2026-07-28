@@ -111,6 +111,7 @@
   .btn-ghost{background:transparent; color:var(--paper);}
   .btn-ghost:hover{background:rgba(239,231,214,0.08);}
   .btn-sm{padding:0.45rem 0.85rem; font-size:0.78rem; border-radius:8px;}
+  button.btn{font-family:inherit; cursor:pointer;}
 
   /* ---------- LEGEND / INTRO ---------- */
   .intro{
@@ -536,6 +537,30 @@
     cursor:pointer;
   }
   .chat-form button:disabled{opacity:0.6; cursor:wait;}
+
+  /* ---------- IMPRESSÃO / PDF ---------- */
+  /* "Baixar PDF" só chama window.print() — o navegador já sabe salvar como
+     PDF, então não há geração no servidor pra manter em dia com as cotações.
+     Esta seção some tudo que não é roteiro (formulários, chat, galeria,
+     botões) e troca o tema escuro por preto-no-branco, que imprime melhor. */
+  @media print{
+    body{background:#fff;}
+    .hero{background:none; color:#000; border-bottom:1px solid #000; padding:0 0 1rem;}
+    .hero::before{display:none;}
+    .hero .eyebrow, .hero p.sub, .hero-route{color:#333;}
+    .hero h1, .hero h1 em{color:#000;}
+    .quickbar, .intro, .live-note, #dicas, #galeria, #chat, footer{display:none !important;}
+    .actions a, .quote-bar{display:none !important;}
+    .map-wrap, details.mapd, .stop-marker{display:none !important;}
+    .timeline::before{display:none;}
+    .stop, .stop.right{width:100% !important; margin-left:0 !important;}
+    .leg{color:#333; text-align:left;}
+    .leg .arrow{color:#000;}
+    .leg a{display:none !important;}
+    .card{box-shadow:none; border:1px solid #999; break-inside:avoid;}
+    .quote-badge{background:none; border:1px solid #666;}
+    .quote-badge .val{color:#000;}
+  }
 </style>
 </head>
 <body>
@@ -551,6 +576,7 @@
     <a class="btn btn-brass" href="https://drive.google.com/drive/folders/1VD2nYaItHTJG6dJl77rWdwvDErywCqzG?usp=drive_link" target="_blank" rel="noopener">📁 Repositório de fotos (Drive)</a>
     <a class="btn btn-teal" href="#roteiro">🗺️ Ver roteiro dia a dia</a>
     <a class="btn btn-ghost" href="#dicas">⚠️ Dicas de carro/estrada</a>
+    <button type="button" class="btn btn-ghost" id="print-pdf">🖨️ Baixar PDF do roteiro</button>
   </div>
 </header>
 
@@ -1358,7 +1384,7 @@
   }
 
   function sourceLabel(source){
-    const labels = { booking: 'Booking', 'serpapi-google-flights': 'Google Flights' };
+    const labels = { 'serpapi-google-hotels': 'Google Hotels', 'serpapi-google-flights': 'Google Flights' };
     return labels[source] || source || '';
   }
 
@@ -1594,6 +1620,8 @@
     initChat();
     initQuotes();
     initFlightQuotes();
+
+    document.getElementById('print-pdf').addEventListener('click', () => window.print());
   })();
 })();
 </script>
