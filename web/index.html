@@ -272,6 +272,38 @@
     user-select:none;
   }
 
+  .dicas-local{
+    margin-top:0.8rem;
+    display:flex; flex-direction:column; gap:0.8rem;
+  }
+  .dicas-cat .dicas-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.68rem;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--rust);
+    display:block;
+    margin-bottom:0.3rem;
+  }
+  .dicas-cat ul{
+    margin:0; padding:0; list-style:none;
+    font-size:0.86rem;
+  }
+  .dicas-cat li{
+    padding:0.3rem 0;
+    border-bottom:1px dashed rgba(15,29,36,0.1);
+  }
+  .dicas-cat li:last-child{border-bottom:none;}
+  .dicas-cat li a{
+    color:var(--ink);
+    font-weight:600;
+    text-decoration:none;
+    border-bottom:1px solid var(--teal);
+  }
+  .dicas-cat li .obs{
+    color:rgba(15,29,36,0.62);
+  }
+
   /* ---------- FOOTER PANEL: TIPS ---------- */
   .panel{
     max-width:920px; margin:0 auto 6rem; padding:0 1.25rem;
@@ -521,6 +553,34 @@
             <iframe loading="lazy" src="https://maps.google.com/maps?q=Lisboa%2C%20Portugal&t=m&z=12&output=embed"></iframe>
           </div>
         </details>
+        <details class="mapd">
+          <summary>Onde comer e o que fazer em Lisboa</summary>
+          <div class="dicas-local">
+            <div class="dicas-cat">
+              <span class="dicas-label">🍽️ Restaurantes (perto do hotel, Marquês de Pombal/Av. Novas)</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=restaurantes+Marqu%C3%AAs+de+Pombal+Lisboa" target="_blank" rel="noopener">Zona do Marquês de Pombal / Gulbenkian</a> <span class="obs">— vários restaurantes portugueses a poucos minutos do hotel, confira notas no Google Maps na hora</span></li>
+              </ul>
+            </div>
+            <div class="dicas-cat">
+              <span class="dicas-label">🥐 Padarias e pastelarias</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Confeitaria+Nacional+Lisboa" target="_blank" rel="noopener">Confeitaria Nacional</a> <span class="obs">— desde 1829, clássica do centro</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Padaria+S%C3%A3o+Roque+Lisboa" target="_blank" rel="noopener">Padaria São Roque</a> <span class="obs">— "a catedral do pão", Bairro Alto/Príncipe Real</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Pastelaria+Batalha+Lisboa" target="_blank" rel="noopener">Pastelaria Batalha</a> <span class="obs">— pão premiado, perto do Rossio</span></li>
+              </ul>
+            </div>
+            <div class="dicas-cat">
+              <span class="dicas-label">🍷 Bares e passeios</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Bairro+Alto+Lisboa" target="_blank" rel="noopener">Bairro Alto</a> <span class="obs">— concentração de bares à noite</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Tasca+do+Chico+Lisboa" target="_blank" rel="noopener">Tasca do Chico</a> <span class="obs">— fado vadio ao vivo (Bairro Alto ou Alfama)</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Miradouro+de+Santa+Luzia+Lisboa" target="_blank" rel="noopener">Miradouro de Santa Luzia</a> <span class="obs">— vista de Alfama e do Tejo</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Mosteiro+dos+Jer%C3%B3nimos+Lisboa" target="_blank" rel="noopener">Belém</a> <span class="obs">— Mosteiro dos Jerónimos, Torre de Belém, e os Pastéis de Belém originais</span></li>
+              </ul>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   </div>
@@ -558,6 +618,36 @@
             <iframe loading="lazy" src="https://maps.google.com/maps?q=Porto%2C%20Portugal&t=m&z=12&output=embed"></iframe>
           </div>
         </details>
+        <details class="mapd">
+          <summary>Onde comer e o que fazer no Porto</summary>
+          <div class="dicas-local">
+            <div class="dicas-cat">
+              <span class="dicas-label">🍽️ Restaurantes (perto do hotel, Boavista)</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Olive+Ristorante+Pizzeria+Porto" target="_blank" rel="noopener">Olive Ristorante & Pizzeria</a> <span class="obs">— bem recomendado pra almoço e jantar</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Restaurante+Medit+Porto" target="_blank" rel="noopener">Restaurante Medit</a> <span class="obs">— cozinha europeia, ~500m do hotel</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Vade+Retro+Porto" target="_blank" rel="noopener">Bar Restaurante Vade Retro</a> <span class="obs">— pratos portugueses</span></li>
+              </ul>
+            </div>
+            <div class="dicas-cat">
+              <span class="dicas-label">🥐 Padarias e pastelarias</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Padaria+Forno+da+Boavista+Porto" target="_blank" rel="noopener">Forno Boavista</a> <span class="obs">— padaria tradicional, Av. Boavista 863</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Manteigaria+Porto" target="_blank" rel="noopener">Manteigaria</a> <span class="obs">— pastel de nata na hora</span></li>
+              </ul>
+            </div>
+            <div class="dicas-cat">
+              <span class="dicas-label">🍷 Bares e passeios</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Miradouro+da+Vit%C3%B3ria+Porto" target="_blank" rel="noopener">Miradouro da Vitória</a> <span class="obs">— vista da cidade e do rio</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Livraria+Lello+Porto" target="_blank" rel="noopener">Livraria Lello e Torre dos Clérigos</a></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Cave+Sandeman+Porto" target="_blank" rel="noopener">Caves Sandeman</a> <span class="obs">— bar ao ar livre em Gaia, prove a Porto Tónica</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Galerias+de+Paris+Porto" target="_blank" rel="noopener">Galerias de Paris</a> <span class="obs">— vida noturna, bares e baladas</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Ribeira+do+Porto" target="_blank" rel="noopener">Ribeira e Ponte D. Luís I</a></li>
+              </ul>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   </div>
@@ -592,6 +682,36 @@
           <summary>Ver mapa de A Coruña</summary>
           <div class="map-wrap">
             <iframe loading="lazy" src="https://maps.google.com/maps?q=A%20Coru%C3%B1a%2C%20Espa%C3%B1a&t=m&z=12&output=embed"></iframe>
+          </div>
+        </details>
+        <details class="mapd">
+          <summary>Onde comer e o que fazer em A Coruña</summary>
+          <div class="dicas-local">
+            <div class="dicas-cat">
+              <span class="dicas-label">🍽️ Restaurantes (perto do hotel, Centro)</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Terreo+Cocina+Casual+A+Coru%C3%B1a" target="_blank" rel="noopener">Terreo Cocina Casual</a> <span class="obs">— 4.8★, ~0.5km</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Artabria+Restaurante+A+Coru%C3%B1a" target="_blank" rel="noopener">Artabria</a> <span class="obs">— 4.5★, bem pertinho</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Meson+Os+Trasnos+A+Coru%C3%B1a" target="_blank" rel="noopener">Mesón Os Trasnos</a> <span class="obs">— 4.5★</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Gloria+Bendita+A+Coru%C3%B1a" target="_blank" rel="noopener">Gloria Bendita</a> <span class="obs">— 4.4★</span></li>
+              </ul>
+            </div>
+            <div class="dicas-cat">
+              <span class="dicas-label">🥐 Padarias e pastelarias</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Amaranto+A+Coru%C3%B1a" target="_blank" rel="noopener">Amaranto</a> <span class="obs">— padaria/café 100% sem glúten</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Panaderia+Cuns+A+Coru%C3%B1a" target="_blank" rel="noopener">Panadería Cuns</a></li>
+              </ul>
+            </div>
+            <div class="dicas-cat">
+              <span class="dicas-label">🍷 Bares e passeios</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Torre+de+Hercules+A+Coru%C3%B1a" target="_blank" rel="noopener">Torre de Hércules</a> <span class="obs">— farol romano, símbolo da cidade</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Plaza+de+Maria+Pita+A+Coru%C3%B1a" target="_blank" rel="noopener">Plaza de María Pita</a></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=La+Bombilla+A+Coru%C3%B1a" target="_blank" rel="noopener">La Bombilla</a> <span class="obs">— clássico de tapas há 80+ anos</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Bar+Pontejos+A+Coru%C3%B1a" target="_blank" rel="noopener">Bar Pontejos</a> <span class="obs">— tortilla de patata feita na hora desde as 7h</span></li>
+              </ul>
+            </div>
           </div>
         </details>
       </div>
@@ -631,6 +751,36 @@
             <iframe loading="lazy" src="https://maps.google.com/maps?q=Madrid%2C%20Espa%C3%B1a&t=m&z=12&output=embed"></iframe>
           </div>
         </details>
+        <details class="mapd">
+          <summary>Onde comer e o que fazer em Madrid</summary>
+          <div class="dicas-local">
+            <div class="dicas-cat">
+              <span class="dicas-label">🍽️ Restaurantes (perto do hotel, Gran Vía)</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Diurno+Madrid" target="_blank" rel="noopener">Diurno</a> <span class="obs">— 9.3, econômico</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Mercado+de+la+Reina+12+Madrid" target="_blank" rel="noopener">Mercado de la Reina</a> <span class="obs">— 9.1, na própria Gran Vía</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Vinitus+Madrid" target="_blank" rel="noopener">Vinitus</a> <span class="obs">— ~25€/pessoa</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Mercado+de+San+Miguel+Madrid" target="_blank" rel="noopener">Mercado de San Miguel</a> <span class="obs">— +20 bancas de comida, perto da Plaza Mayor</span></li>
+              </ul>
+            </div>
+            <div class="dicas-cat">
+              <span class="dicas-label">🥐 Padarias e pastelarias</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=La+Primera+Madrid+desayunos" target="_blank" rel="noopener">La Primera</a> <span class="obs">— café da manhã completo a partir de 5,20€</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=panaderia+Gran+Via+Madrid" target="_blank" rel="noopener">Padarias perto da Gran Vía</a> <span class="obs">— confira notas no Google Maps na hora</span></li>
+              </ul>
+            </div>
+            <div class="dicas-cat">
+              <span class="dicas-label">🍷 Bares e passeios</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=La+Latina+Madrid" target="_blank" rel="noopener">La Latina (Cava Alta/Cava Baja)</a> <span class="obs">— bairro mais tradicional de tapas</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=El+Tigre+Madrid" target="_blank" rel="noopener">El Tigre</a> <span class="obs">— tapas enormes de graça com a bebida</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Bodega+La+Ardosa+Madrid" target="_blank" rel="noopener">Bodega La Ardosa</a></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Palacio+Real+de+Madrid" target="_blank" rel="noopener">Palacio Real</a></li>
+              </ul>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   </div>
@@ -665,6 +815,36 @@
           <summary>Ver mapa de Granada</summary>
           <div class="map-wrap">
             <iframe loading="lazy" src="https://maps.google.com/maps?q=Granada%2C%20Espa%C3%B1a&t=m&z=12&output=embed"></iframe>
+          </div>
+        </details>
+        <details class="mapd">
+          <summary>Onde comer e o que fazer em Granada</summary>
+          <div class="dicas-local">
+            <div class="dicas-cat">
+              <span class="dicas-label">🍽️ Restaurantes (perto do hotel, Porcel Alixares)</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Pizzeria+de+l%27Angus+Granada" target="_blank" rel="noopener">Pizzería de l'Angus</a> <span class="obs">— ~100m do hotel</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Restaurante+La+Mimbre+Granada" target="_blank" rel="noopener">Restaurante La Mimbre</a></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Calle+Elvira+Granada" target="_blank" rel="noopener">Calle Elvira</a> <span class="obs">— ~20min a pé, cheia de bares/tapas andaluzas</span></li>
+              </ul>
+            </div>
+            <div class="dicas-cat">
+              <span class="dicas-label">🥐 Padarias e pastelarias</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Casa+Pasteles+Albayzin+Granada" target="_blank" rel="noopener">Casa Pasteles Albayzín</a> <span class="obs">— 4.2★, no Albaicín</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=La+Patisserie+de+Paris+Granada" target="_blank" rel="noopener">La Pâtisserie de Paris</a> <span class="obs">— 4.8★</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Cafe+Pasteleria+Lopez-Mezquita+Granada" target="_blank" rel="noopener">Café Pastelería López-Mezquita</a> <span class="obs">— histórica, prove o pionono</span></li>
+              </ul>
+            </div>
+            <div class="dicas-cat">
+              <span class="dicas-label">🍷 Bares e passeios</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Alhambra+Granada" target="_blank" rel="noopener">Alhambra</a> <span class="obs">— reserve ingresso com antecedência</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Mirador+de+San+Nicolas+Granada" target="_blank" rel="noopener">Mirador de San Nicolás</a> <span class="obs">— vista da Alhambra, vá 1h antes do pôr do sol</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Bar+Kiki+Granada" target="_blank" rel="noopener">Kiki</a> <span class="obs">— tapas com terraço panorâmico perto do mirador</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Calle+Navas+Granada" target="_blank" rel="noopener">Calle Navas</a> <span class="obs">— clássico local de cerveja + tapas</span></li>
+              </ul>
+            </div>
           </div>
         </details>
       </div>
@@ -703,6 +883,34 @@
             <iframe loading="lazy" src="https://maps.google.com/maps?q=Torremolinos%2C%20Espa%C3%B1a&t=m&z=12&output=embed"></iframe>
           </div>
         </details>
+        <details class="mapd">
+          <summary>Onde comer e o que fazer em Torremolinos</summary>
+          <div class="dicas-local">
+            <div class="dicas-cat">
+              <span class="dicas-label">🍽️ Restaurantes (perto do hotel, Los Jazmines)</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Arrozante+Torremolinos" target="_blank" rel="noopener">Arrozante</a> <span class="obs">— 9.8, muito bem avaliado</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Alby%27s+Torremolinos" target="_blank" rel="noopener">Alby's</a> <span class="obs">— 9.3</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Angus+Playamar+Torremolinos" target="_blank" rel="noopener">ANGUS Playamar</a> <span class="obs">— 9.2, com terraço</span></li>
+              </ul>
+            </div>
+            <div class="dicas-cat">
+              <span class="dicas-label">🥐 Padarias e pastelarias</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=panaderia+Torremolinos+centro" target="_blank" rel="noopener">Padarias no centro/La Carihuela</a> <span class="obs">— confira notas no Google Maps na hora</span></li>
+              </ul>
+            </div>
+            <div class="dicas-cat">
+              <span class="dicas-label">🍷 Bares, praia e passeios</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=La+Carihuela+Torremolinos" target="_blank" rel="noopener">La Carihuela</a> <span class="obs">— melhor praia urbana de Málaga, chiringuitos de peixe frito</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Playa+del+Bajondillo+Torremolinos" target="_blank" rel="noopener">Playa del Bajondillo</a> <span class="obs">— perto do centro</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Calle+San+Miguel+Torremolinos" target="_blank" rel="noopener">Calle San Miguel</a> <span class="obs">— lojas, bares e restaurantes</span></li>
+                <li><span class="obs">Prove os espetos de sardinhas e o gazpacho nos chiringuitos de praia</span></li>
+              </ul>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   </div>
@@ -739,6 +947,34 @@
             <iframe loading="lazy" src="https://maps.google.com/maps?q=Sevilla%2C%20Espa%C3%B1a&t=m&z=12&output=embed"></iframe>
           </div>
         </details>
+        <details class="mapd">
+          <summary>Onde comer e o que fazer em Sevilha</summary>
+          <div class="dicas-local">
+            <div class="dicas-cat">
+              <span class="dicas-label">🍽️ Restaurantes (centro histórico)</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Bodeguita+Antonio+Romero+Sevilla" target="_blank" rel="noopener">Bodeguita Antonio Romero</a> <span class="obs">— bairro do Arenal, ~10€/pessoa</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Bar+Sal+Gorda+Sevilla" target="_blank" rel="noopener">Bar Sal Gorda</a></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=El+Pasaje+Tapas+Sevilla" target="_blank" rel="noopener">El Pasaje Tapas</a></li>
+              </ul>
+            </div>
+            <div class="dicas-cat">
+              <span class="dicas-label">🥐 Padarias e pastelarias</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=panaderia+centro+Sevilla" target="_blank" rel="noopener">Padarias no centro histórico</a> <span class="obs">— confira notas no Google Maps na hora</span></li>
+              </ul>
+            </div>
+            <div class="dicas-cat">
+              <span class="dicas-label">🍷 Bares e passeios</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Real+Alcazar+de+Sevilla" target="_blank" rel="noopener">Real Alcázar</a></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Plaza+de+Espana+Sevilla" target="_blank" rel="noopener">Plaza de España</a></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Triana+Sevilla" target="_blank" rel="noopener">Triana</a> <span class="obs">— maior concentração de bares de tapas da cidade</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Bodega+Santa+Cruz+Las+Columnas+Sevilla" target="_blank" rel="noopener">Bodega Santa Cruz "Las Columnas"</a> <span class="obs">— clássica, perto da catedral</span></li>
+              </ul>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   </div>
@@ -773,6 +1009,34 @@
           <summary>Ver mapa de Salamanca</summary>
           <div class="map-wrap">
             <iframe loading="lazy" src="https://maps.google.com/maps?q=Salamanca%2C%20Espa%C3%B1a&t=m&z=12&output=embed"></iframe>
+          </div>
+        </details>
+        <details class="mapd">
+          <summary>Onde comer e o que fazer em Salamanca</summary>
+          <div class="dicas-local">
+            <div class="dicas-cat">
+              <span class="dicas-label">🍽️ Restaurantes</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Restaurante+Hotel+San+Polo+Salamanca" target="_blank" rel="noopener">Restaurante do próprio Hotel San Polo</a> <span class="obs">— 4.1★, ~2000 avaliações, ótimo custo-benefício</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=El+Patio+Chico+Salamanca" target="_blank" rel="noopener">El Patio Chico</a> <span class="obs">— perto da Plaza Mayor, tapa grátis com cada caña</span></li>
+              </ul>
+            </div>
+            <div class="dicas-cat">
+              <span class="dicas-label">🥐 Padarias e pastelarias</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=panaderia+Plaza+Mayor+Salamanca" target="_blank" rel="noopener">Padarias perto da Plaza Mayor</a> <span class="obs">— confira notas no Google Maps na hora</span></li>
+              </ul>
+            </div>
+            <div class="dicas-cat">
+              <span class="dicas-label">🍷 Bares e passeios</span>
+              <ul>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Plaza+Mayor+Salamanca" target="_blank" rel="noopener">Plaza Mayor</a></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Winelovers+Salamanca" target="_blank" rel="noopener">Winelovers</a> <span class="obs">— +200 vinhos e tapas feitas na hora</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Meson+Cervantes+Salamanca" target="_blank" rel="noopener">Mesón Cervantes</a> <span class="obs">— tapas tradicionais na Plaza Mayor</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Casa+Lis+Salamanca" target="_blank" rel="noopener">Casa Lis</a> <span class="obs">— museu Art Nouveau/Art Déco</span></li>
+                <li><a href="https://www.google.com/maps/search/?api=1&query=Puente+Romano+Salamanca" target="_blank" rel="noopener">Puente Romano</a> <span class="obs">— melhor vista panorâmica da cidade</span></li>
+              </ul>
+            </div>
           </div>
         </details>
       </div>
