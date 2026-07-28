@@ -96,21 +96,21 @@ type hotelsResponse struct {
 
 // buildURL includes the API key and must never be logged — RedactedURL is the
 // safe version for that.
-func (f *Fetcher) buildURL(s Spec) string {
-	q := baseParams(s)
+func (f *Fetcher) buildURL(query string, s Spec) string {
+	q := baseParams(query, s)
 	q.Set("api_key", f.apiKey)
 	return "https://serpapi.com/search.json?" + q.Encode()
 }
 
 // RedactedURL is the same request with the API key omitted, safe for logs.
 func RedactedURL(s Spec) string {
-	return "https://serpapi.com/search.json?" + baseParams(s).Encode()
+	return "https://serpapi.com/search.json?" + baseParams(s.Label, s).Encode()
 }
 
-func baseParams(s Spec) url.Values {
+func baseParams(query string, s Spec) url.Values {
 	q := url.Values{}
 	q.Set("engine", "google_hotels")
-	q.Set("q", s.Label)
+	q.Set("q", query)
 	q.Set("check_in_date", s.Checkin)
 	q.Set("check_out_date", s.Checkout)
 	q.Set("adults", strconv.Itoa(s.Adults))
@@ -137,55 +137,46 @@ func (f *Fetcher) Fetch(ctx context.Context, s Spec) Quote {
 		return q
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, f.buildURL(s), nil)
+	parsed, err := f.search(ctx, s.Label, s)
 	if err != nil {
 		q.Err = err.Error()
 		return q
 	}
 
-	resp, err := f.client.Do(req)
-	if err != nil {
-		q.Err = "falha ao contatar a SerpApi"
-		return q
-	}
-	defer resp.Body.Close()
+	if len(parsed.Properties) > 0 {
+		if exact := findByName(parsed.Properties, s.Label); exact != nil {
+			if price := nightlyTotal(*exact, q.Nights); price > 0 {
+				q.Price = fmt.Sprintf("R$ %.0f", price)
+				q.Match = "exato"
+				return q
+			}
+		}
 
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxBody))
-	if err != nil {
-		q.Err = "falha ao ler resposta da SerpApi"
-		return q
-	}
-	if resp.StatusCode != http.StatusOK {
-		q.Err = fmt.Sprintf("serpapi respondeu http %d: %s", resp.StatusCode, snippet(body, 300))
-		return q
-	}
-
-	var parsed hotelsResponse
-	if err := json.Unmarshal(body, &parsed); err != nil {
-		q.Err = fmt.Sprintf("resposta da serpapi em formato inesperado (%s): %s", err.Error(), snippet(body, 300))
-		return q
-	}
-	if parsed.Error != "" {
-		q.Err = "serpapi: " + parsed.Error
-		return q
-	}
-	if len(parsed.Properties) == 0 {
-		q.Err = "serpapi nao encontrou nada nessa regiao para essas datas"
-		return q
-	}
-
-	if exact := findByName(parsed.Properties, s.Label); exact != nil {
-		if price := nightlyTotal(*exact, q.Nights); price > 0 {
-			q.Price = fmt.Sprintf("R$ %.0f", price)
-			q.Match = "exato"
+		// O hotel buscado nao apareceu (ou apareceu sem preco) nos resultados
+		// - troca por uma opcao de 3-4 estrelas mais barata na mesma busca,
+		// ja que a regiao e as datas continuam as mesmas.
+		if sub := cheapestInClassRange(parsed.Properties, 3, 4, q.Nights); sub != nil {
+			q.Price = fmt.Sprintf("R$ %.0f", nightlyTotal(*sub, q.Nights))
+			q.Match = "similar"
+			q.Found = sub.Name
 			return q
 		}
 	}
 
-	// O hotel buscado nao apareceu (ou apareceu sem preco) nos resultados -
-	// troca por uma opcao de 3-4 estrelas mais barata na mesma busca, ja que
-	// a regiao e as datas continuam as mesmas.
-	if sub := cheapestInClassRange(parsed.Properties, 3, 4, q.Nights); sub != nil {
+	// Buscar pelo nome do hotel especifico as vezes nao retorna nada (Google
+	// nao reconhece o texto como uma propriedade), mesmo a cidade tendo
+	// hoteis de sobra. Tenta de novo so com a cidade, que e uma busca bem
+	// mais generica e praticamente sempre retorna resultados.
+	broad, err := f.search(ctx, s.City, s)
+	if err != nil {
+		q.Err = err.Error()
+		return q
+	}
+	if len(broad.Properties) == 0 {
+		q.Err = "serpapi nao encontrou nada nessa regiao para essas datas"
+		return q
+	}
+	if sub := cheapestInClassRange(broad.Properties, 3, 4, q.Nights); sub != nil {
 		q.Price = fmt.Sprintf("R$ %.0f", nightlyTotal(*sub, q.Nights))
 		q.Match = "similar"
 		q.Found = sub.Name
@@ -194,6 +185,37 @@ func (f *Fetcher) Fetch(ctx context.Context, s Spec) Quote {
 
 	q.Err = "hotel buscado nao encontrado, e nenhuma opcao 3-4 estrelas com preco disponivel nessa regiao"
 	return q
+}
+
+// search runs one google_hotels query and returns the parsed response.
+func (f *Fetcher) search(ctx context.Context, query string, s Spec) (hotelsResponse, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, f.buildURL(query, s), nil)
+	if err != nil {
+		return hotelsResponse{}, err
+	}
+
+	resp, err := f.client.Do(req)
+	if err != nil {
+		return hotelsResponse{}, fmt.Errorf("falha ao contatar a SerpApi")
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxBody))
+	if err != nil {
+		return hotelsResponse{}, fmt.Errorf("falha ao ler resposta da SerpApi")
+	}
+	if resp.StatusCode != http.StatusOK {
+		return hotelsResponse{}, fmt.Errorf("serpapi respondeu http %d: %s", resp.StatusCode, snippet(body, 300))
+	}
+
+	var parsed hotelsResponse
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		return hotelsResponse{}, fmt.Errorf("resposta da serpapi em formato inesperado (%s): %s", err.Error(), snippet(body, 300))
+	}
+	if parsed.Error != "" {
+		return hotelsResponse{}, fmt.Errorf("serpapi: %s", parsed.Error)
+	}
+	return parsed, nil
 }
 
 // findByName looks for the searched hotel among the results by a loose,
