@@ -45,7 +45,50 @@ por terem vários serviços — api, db, redis — na mesma stack).
    - Aba **Storages**: adicione um volume persistente com mount path `/data`
      (é onde o app grava `trip.json` e as fotos enviadas — sem isso, tudo
      some a cada redeploy).
+   - Aba **Environment Variables**: adicione as 4 variáveis do Google Drive
+     (veja seção abaixo) se quiser sincronização automática das fotos.
    - Deploy.
+
+## Sincronização com o Google Drive (opcional)
+
+Toda foto enviada pelo site pode ser copiada automaticamente pra uma pasta do
+Google Drive, além de ficar salva no próprio servidor. Isso usa OAuth com a
+conta Google dona da pasta (contas pessoais @gmail.com não dão quota de
+armazenamento pra Service Account gravar em Meu Drive, então tem que ser
+assim).
+
+### Setup (uma vez só)
+
+1. No [Google Cloud Console](https://console.cloud.google.com/), crie um
+   projeto, ative a **Google Drive API**, configure a **OAuth consent
+   screen** (tipo External, adicione sua conta como test user, e depois mude
+   o **Publishing status** para **"In production"** — senão o token expira
+   em 7 dias).
+2. Em **Credentials**, crie um **OAuth client ID** tipo **Desktop app**.
+   Guarde o Client ID e o Client Secret.
+3. Rode localmente (uma vez só, abre uma autorização no navegador):
+   ```bash
+   GOOGLE_CLIENT_ID=seu-client-id \
+   GOOGLE_CLIENT_SECRET=seu-client-secret \
+   go run ./cmd/get-drive-token
+   ```
+   Abra o link impresso, autorize com a conta dona da pasta do Drive, e
+   copie o **refresh token** que aparece no terminal.
+4. Pegue o **ID da pasta** do Drive a partir da URL dela:
+   `https://drive.google.com/drive/folders/`**`ESSE_ID_AQUI`**`?usp=drive_link`
+
+### Variáveis de ambiente (Coolify)
+
+| Variável | Valor |
+|---|---|
+| `GOOGLE_CLIENT_ID` | do passo 2 |
+| `GOOGLE_CLIENT_SECRET` | do passo 2 |
+| `GOOGLE_REFRESH_TOKEN` | do passo 3 |
+| `GOOGLE_DRIVE_FOLDER_ID` | do passo 4 |
+
+Se qualquer uma dessas 4 faltar, o app funciona normalmente (galeria só no
+próprio servidor) — a sincronização é best-effort: se o Drive falhar por
+qualquer motivo, só fica registrado no log, nunca quebra o upload no site.
 
 ### Atualizar depois
 
@@ -76,8 +119,10 @@ de Basic Auth pronto na aba de configurações do app (nome de usuário/senha
 ## Estrutura
 
 ```
-main.go               servidor HTTP + rotas /api/photos, /api/upload, /api/chat
-internal/store/       persistência em JSON (mutex + escrita atômica)
-web/index.html         site (embutido no binário via go:embed)
-Dockerfile             build multi-stage (Go alpine → alpine runtime)
+main.go                    servidor HTTP + rotas /api/photos, /api/upload, /api/chat
+internal/store/            persistência em JSON (mutex + escrita atômica)
+internal/drivesync/        upload best-effort pro Google Drive (OAuth)
+cmd/get-drive-token/       helper local pra gerar o refresh token (rodar 1x)
+web/index.html             site (embutido no binário via go:embed)
+Dockerfile                 build multi-stage (Go alpine → alpine runtime)
 ```

@@ -20,6 +20,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"viagem/internal/drivesync"
 	"viagem/internal/store"
 )
 
@@ -52,6 +53,21 @@ func main() {
 	s, err := store.New(dbPath)
 	if err != nil {
 		log.Fatalf("failed to open store at %s: %v", dbPath, err)
+	}
+
+	driveClient, err := drivesync.New(context.Background(),
+		os.Getenv("GOOGLE_CLIENT_ID"),
+		os.Getenv("GOOGLE_CLIENT_SECRET"),
+		os.Getenv("GOOGLE_REFRESH_TOKEN"),
+		os.Getenv("GOOGLE_DRIVE_FOLDER_ID"),
+	)
+	if err != nil {
+		log.Fatalf("drive sync setup: %v", err)
+	}
+	if driveClient != nil {
+		log.Printf("drive sync: enabled")
+	} else {
+		log.Printf("drive sync: disabled (missing GOOGLE_* env vars)")
 	}
 
 	indexPage, err := webFS.ReadFile("web/index.html")
@@ -163,6 +179,11 @@ func main() {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "falha ao salvar"})
 			return
 		}
+
+		if driveClient != nil {
+			go syncToDrive(driveClient, uploadsDir, filename, contentType)
+		}
+
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 	})
 
@@ -231,6 +252,22 @@ func envOr(key, fallback string) string {
 
 func validField(v string, maxLen int) bool {
 	return v != "" && utf8.RuneCountInString(v) <= maxLen
+}
+
+func syncToDrive(c *drivesync.Client, uploadsDir, filename, contentType string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	f, err := os.Open(filepath.Join(uploadsDir, filename))
+	if err != nil {
+		log.Printf("drive sync: reopen file: %v", err)
+		return
+	}
+	defer f.Close()
+
+	if _, err := c.Upload(ctx, filename, contentType, f); err != nil {
+		log.Printf("drive sync: %v", err)
+	}
 }
 
 func randomHex(n int) string {

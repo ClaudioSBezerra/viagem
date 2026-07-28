@@ -1,10 +1,11 @@
 # viagem — micro site do roteiro Ibérico (Coolify)
-# Imagem única: binário Go com o site embutido (go:embed), sem dependências externas.
+# Imagem única: binário Go com o site embutido (go:embed).
 
 FROM golang:1.26-alpine AS builder
 WORKDIR /app
 
-COPY go.mod ./
+COPY go.mod go.sum ./
+RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o viagem .
 
