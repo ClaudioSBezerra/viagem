@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -53,8 +54,13 @@ type Quote struct {
 	Price  string `json:"price,omitempty"`
 	Nights int    `json:"nights,omitempty"`
 	Source string `json:"source"`
-	Err    string `json:"error,omitempty"`
-	Ts     int64  `json:"ts"`
+	// Match is "exato" when Price came from the searched hotel itself, or
+	// "similar" when that hotel wasn't found and Price/Found describe a 3-4
+	// star stand-in in the same search results instead.
+	Match string `json:"match,omitempty"`
+	Found string `json:"found,omitempty"`
+	Err   string `json:"error,omitempty"`
+	Ts    int64  `json:"ts"`
 }
 
 // Fetcher prices Specs against SerpApi's Google Hotels engine.
@@ -73,8 +79,9 @@ func NewFetcher(apiKey string) *Fetcher {
 }
 
 type hotelProperty struct {
-	Name      string `json:"name"`
-	TotalRate struct {
+	Name                string `json:"name"`
+	ExtractedHotelClass int    `json:"extracted_hotel_class"`
+	TotalRate           struct {
 		ExtractedLowest float64 `json:"extracted_lowest"`
 	} `json:"total_rate"`
 	RatePerNight struct {
@@ -163,24 +170,83 @@ func (f *Fetcher) Fetch(ctx context.Context, s Spec) Quote {
 		return q
 	}
 	if len(parsed.Properties) == 0 {
-		q.Err = "serpapi nao encontrou esse hotel para essas datas"
+		q.Err = "serpapi nao encontrou nada nessa regiao para essas datas"
 		return q
 	}
 
-	// The search text is the specific hotel + city, so Google's own ranking
-	// puts the matching property first — no separate name-matching needed.
-	top := parsed.Properties[0]
-	best := top.TotalRate.ExtractedLowest
-	if best <= 0 && q.Nights > 0 {
-		best = top.RatePerNight.ExtractedLowest * float64(q.Nights)
+	if exact := findByName(parsed.Properties, s.Label); exact != nil {
+		if price := nightlyTotal(*exact, q.Nights); price > 0 {
+			q.Price = fmt.Sprintf("R$ %.0f", price)
+			q.Match = "exato"
+			return q
+		}
 	}
-	if best <= 0 {
-		q.Err = "serpapi nao retornou um preco valido"
+
+	// O hotel buscado nao apareceu (ou apareceu sem preco) nos resultados -
+	// troca por uma opcao de 3-4 estrelas mais barata na mesma busca, ja que
+	// a regiao e as datas continuam as mesmas.
+	if sub := cheapestInClassRange(parsed.Properties, 3, 4, q.Nights); sub != nil {
+		q.Price = fmt.Sprintf("R$ %.0f", nightlyTotal(*sub, q.Nights))
+		q.Match = "similar"
+		q.Found = sub.Name
 		return q
 	}
 
-	q.Price = fmt.Sprintf("R$ %.0f", best)
+	q.Err = "hotel buscado nao encontrado, e nenhuma opcao 3-4 estrelas com preco disponivel nessa regiao"
 	return q
+}
+
+// findByName looks for the searched hotel among the results by a loose,
+// case-insensitive substring match in either direction — property names from
+// SerpApi don't always match our stored label exactly (chain prefixes,
+// rebrands), and requiring an exact match would trigger the "similar hotel"
+// fallback far more often than it should.
+func findByName(props []hotelProperty, label string) *hotelProperty {
+	h := strings.ToLower(label)
+	for i := range props {
+		p := strings.ToLower(props[i].Name)
+		if p == "" {
+			continue
+		}
+		if strings.Contains(h, p) || strings.Contains(p, h) {
+			return &props[i]
+		}
+	}
+	return nil
+}
+
+// cheapestInClassRange returns the lowest-priced property whose star class
+// falls in [min, max], or nil if none has both a class in range and a usable
+// price.
+func cheapestInClassRange(props []hotelProperty, min, max, nights int) *hotelProperty {
+	var best *hotelProperty
+	var bestPrice float64
+	for i := range props {
+		p := &props[i]
+		if p.ExtractedHotelClass < min || p.ExtractedHotelClass > max {
+			continue
+		}
+		price := nightlyTotal(*p, nights)
+		if price <= 0 {
+			continue
+		}
+		if best == nil || price < bestPrice {
+			best, bestPrice = p, price
+		}
+	}
+	return best
+}
+
+// nightlyTotal returns the stay's total price, falling back to rate-per-night
+// times the number of nights when SerpApi only gave a nightly rate.
+func nightlyTotal(p hotelProperty, nights int) float64 {
+	if p.TotalRate.ExtractedLowest > 0 {
+		return p.TotalRate.ExtractedLowest
+	}
+	if nights > 0 && p.RatePerNight.ExtractedLowest > 0 {
+		return p.RatePerNight.ExtractedLowest * float64(nights)
+	}
+	return 0
 }
 
 func snippet(body []byte, n int) string {

@@ -382,6 +382,32 @@
     margin-bottom:0.4rem;
   }
 
+  .resumo-box{
+    background:var(--night-2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:1.1rem 1.3rem;
+  }
+  .resumo-line{
+    display:flex; justify-content:space-between; gap:1rem;
+    padding:0.5rem 0;
+    border-bottom:1px dashed var(--line);
+    font-size:0.92rem;
+    color:rgba(239,231,214,0.85);
+  }
+  .resumo-line:last-of-type{border-bottom:none;}
+  .resumo-line.total{
+    font-weight:700; font-size:1.05rem;
+    color:var(--paper);
+    border-top:1px solid var(--line);
+    border-bottom:none;
+    margin-top:0.2rem; padding-top:0.7rem;
+  }
+  .resumo-note{
+    margin:0.7rem 0 0; font-size:0.78rem;
+    color:var(--brass);
+  }
+
   footer{
     text-align:center;
     padding:2.5rem 1.5rem 3.5rem;
@@ -560,6 +586,11 @@
     .card{box-shadow:none; border:1px solid #999; break-inside:avoid;}
     .quote-badge{background:none; border:1px solid #666;}
     .quote-badge .val{color:#000;}
+    #resumo{break-inside:avoid;}
+    #resumo h3{color:#000;}
+    .resumo-box{background:none; border:1px solid #999;}
+    .resumo-line, .resumo-line.total{color:#000; border-color:#ccc;}
+    .resumo-note{color:#333;}
   }
 </style>
 </head>
@@ -1161,6 +1192,11 @@
 
 </div>
 
+<div class="panel" id="resumo" hidden>
+  <h3>💵 Resumo de custos</h3>
+  <div class="resumo-box" id="resumo-box"></div>
+</div>
+
 <div id="dicas" class="panel">
   <h3>Dicas rápidas para quem vai dirigir</h3>
   <div class="tips">
@@ -1388,6 +1424,53 @@
     return labels[source] || source || '';
   }
 
+  /* ---------------- RESUMO DE CUSTOS ---------------- */
+  /* Soma direto os valores cotados (2 pessoas/1 quarto por hospedagem, 2
+     passageiros no voo) sem tentar escalar pro tamanho real do grupo — é uma
+     estimativa, não o custo fechado da viagem inteira. */
+  let lastHotelQuotes = {};
+  let lastFlightQuotes = {};
+  const HOTEL_STAYS_TOTAL = document.querySelectorAll('[data-quote]').length;
+  // Duas paradas (ida e volta) apontam pra mesma rota via data-flight, então
+  // conta valores únicos em vez de elementos.
+  const FLIGHT_ROUTES_TOTAL = new Set(Array.from(document.querySelectorAll('[data-flight]')).map(el => el.dataset.flight)).size;
+
+  function parseValor(str){
+    const digits = String(str || '').replace(/[^0-9]/g, '');
+    return digits ? parseInt(digits, 10) : 0;
+  }
+
+  function fmtBRL(n){
+    return 'R$ ' + n.toLocaleString('pt-BR');
+  }
+
+  function renderResumo(){
+    const panel = document.getElementById('resumo');
+    const box = document.getElementById('resumo-box');
+    if(!panel || !box) return;
+
+    const hotelQuoted = Object.values(lastHotelQuotes).filter(q => q.price);
+    const flightQuoted = Object.values(lastFlightQuotes).filter(q => q.price);
+    if(!hotelQuoted.length && !flightQuoted.length){
+      panel.hidden = true;
+      return;
+    }
+    panel.hidden = false;
+
+    const totalHoteis = hotelQuoted.reduce((sum, q) => sum + parseValor(q.price), 0);
+    const totalVoo = flightQuoted.reduce((sum, q) => sum + parseValor(q.price), 0);
+    const totalGeral = totalHoteis + totalVoo;
+    const porPessoa = totalGeral / 2;
+    const completo = hotelQuoted.length === HOTEL_STAYS_TOTAL && flightQuoted.length === FLIGHT_ROUTES_TOTAL;
+
+    box.innerHTML =
+      '<div class="resumo-line"><span>Hotéis (' + hotelQuoted.length + '/' + HOTEL_STAYS_TOTAL + ' cotados)</span><span>' + fmtBRL(totalHoteis) + '</span></div>' +
+      '<div class="resumo-line"><span>Passagem aérea (' + flightQuoted.length + '/' + FLIGHT_ROUTES_TOTAL + ' cotada)</span><span>' + fmtBRL(totalVoo) + '</span></div>' +
+      '<div class="resumo-line total"><span>Total geral</span><span>' + fmtBRL(totalGeral) + '</span></div>' +
+      '<div class="resumo-line total"><span>Total por pessoa (2 pax)</span><span>' + fmtBRL(porPessoa) + '</span></div>' +
+      (completo ? '' : '<p class="resumo-note">Estimativa parcial — nem tudo foi cotado ainda.</p>');
+  }
+
   function renderQuotes(quotes){
     document.querySelectorAll('[data-quote]').forEach(el => {
       const q = quotes[el.dataset.quote];
@@ -1403,10 +1486,12 @@
       const via = sourceLabel(q.source) ? ' · ' + sourceLabel(q.source) : '';
       if(q.price){
         const nights = q.nights ? ' · ' + q.nights + (q.nights > 1 ? ' noites' : ' noite') : '';
-        badge.className = 'quote-badge';
+        const similar = q.match === 'similar' && q.found ? ' · similar: ' + q.found : '';
+        badge.className = 'quote-badge' + (similar ? ' similar' : '');
         badge.removeAttribute('title');
+        if(similar) badge.title = 'Hotel buscado não encontrado na busca — preço é de um hotel parecido (3-4 estrelas) na mesma região';
         badge.innerHTML = '<span class="val">' + escapeHtml(q.price) + '</span>' +
-                          '<span class="when">' + escapeHtml(timeAgo(q.ts) + nights + via) + '</span>';
+                          '<span class="when">' + escapeHtml(timeAgo(q.ts) + nights + via + similar) + '</span>';
       }else{
         badge.className = 'quote-badge err';
         badge.title = q.error || 'sem detalhes';
@@ -1429,6 +1514,8 @@
       const data = await api('/api/quotes');
       const quotes = data.quotes || {};
       renderQuotes(quotes);
+      lastHotelQuotes = quotes;
+      renderResumo();
       return quotes;
     }
 
@@ -1541,6 +1628,8 @@
       const data = await api('/api/flights');
       const flights = data.flights || {};
       renderFlightQuotes(flights);
+      lastFlightQuotes = flights;
+      renderResumo();
       return flights;
     }
 
