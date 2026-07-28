@@ -145,6 +145,23 @@ servidor em proxy aberto.
 > (`go test ./internal/quotes/`) falha se as duas listas divergirem, então
 > ajuste sempre as duas.
 
+## Cotação de passagem aérea (ida e volta Goiânia↔Lisboa)
+
+Usa a SerpApi (engine `google_flights`) — uma API de verdade, não scraping —
+pra cotar o trecho aéreo (2 passageiros). Diferente dos hotéis, essa cotação
+**não roda sozinha**: o plano gratuito da SerpApi é uma cota mensal
+compartilhada e cada cotação de ida-e-volta gasta duas buscas (ida, depois
+volta), então só acontece quando alguém clica em **"Cotar passagem"**, com um
+cooldown de 1h entre cliques.
+
+| Variável | Efeito |
+|---|---|
+| `SERPAPI_KEY` | chave da SerpApi — sem ela, a seção de voo some do site (nenhum erro, só fica desligada) |
+
+Pegue a chave em [serpapi.com](https://serpapi.com) (tem plano gratuito) e
+cadastre `SERPAPI_KEY` nas variáveis de ambiente do Coolify, junto das outras.
+Nunca coloque o valor da chave em nenhum arquivo do repositório.
+
 ## Backup dos dados
 
 ```bash
@@ -165,6 +182,8 @@ de Basic Auth pronto na aba de configurações do app (nome de usuário/senha
 main.go                    servidor HTTP + rotas /api/photos, /api/upload, /api/chat
 internal/store/            persistência em JSON (mutex + escrita atômica)
 internal/drivesync/        upload best-effort pro Google Drive (OAuth)
+internal/quotes/           cotação automática de hotel (scraping do Booking)
+internal/flights/          cotação manual de passagem (SerpApi/Google Flights)
 cmd/get-drive-token/       helper local pra gerar o refresh token (rodar 1x)
 web/index.html             site (embutido no binário via go:embed)
 Dockerfile                 build multi-stage (Go alpine → alpine runtime)

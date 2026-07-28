@@ -22,6 +22,7 @@ import (
 	"unicode/utf8"
 
 	"viagem/internal/drivesync"
+	"viagem/internal/flights"
 	"viagem/internal/quotes"
 	"viagem/internal/store"
 )
@@ -40,6 +41,13 @@ const (
 	quoteInterval = 12 * time.Hour
 	quoteCooldown = 10 * time.Minute
 	quoteSpacing  = 5 * time.Second
+
+	// flightCooldown gates manual flight-price refreshes. SerpApi's free tier
+	// is a monthly quota shared with anything else using the same key, and a
+	// round trip costs two searches (outbound + return), so unlike hotel
+	// quotes this never runs on a timer — only a person clicking the button,
+	// at most once an hour.
+	flightCooldown = 1 * time.Hour
 )
 
 var urlScheme = regexp.MustCompile(`(?i)^https?://`)
@@ -92,6 +100,15 @@ func main() {
 		go refresher.loop()
 	} else {
 		log.Printf("quotes: disabled (QUOTES_ENABLED=0)")
+	}
+
+	flightsAPIKey := os.Getenv("SERPAPI_KEY")
+	flightsEnabled := flightsAPIKey != ""
+	flightRefresh := &flightRefresher{fetcher: flights.NewFetcher(flightsAPIKey), store: s}
+	if flightsEnabled {
+		log.Printf("flights: enabled (%d rota(s), cotacao manual, cooldown de %s)", len(flights.Routes), flightCooldown)
+	} else {
+		log.Printf("flights: disabled (missing SERPAPI_KEY)")
 	}
 
 	mux := http.NewServeMux()
@@ -262,6 +279,30 @@ func main() {
 		})
 	}
 
+	if flightsEnabled {
+		mux.HandleFunc("GET /api/flights", func(w http.ResponseWriter, r *http.Request) {
+			writeJSON(w, http.StatusOK, map[string]any{
+				"flights":   s.ListFlightQuotes(),
+				"nextAfter": flightRefresh.nextAllowed().UnixMilli(),
+			})
+		})
+
+		// No background loop here, unlike hotel quotes: SerpApi's quota is
+		// shared and a round trip costs two searches, so pricing only happens
+		// when someone clicks the button, gated by flightCooldown.
+		mux.HandleFunc("POST /api/flights/refresh", func(w http.ResponseWriter, r *http.Request) {
+			startedAt, wait, ok := flightRefresh.start()
+			if !ok {
+				writeJSON(w, http.StatusTooManyRequests, map[string]any{
+					"error":      "cotacao recente demais, aguarde",
+					"retryAfter": int(wait.Seconds()),
+				})
+				return
+			}
+			writeJSON(w, http.StatusAccepted, map[string]any{"started": true, "startedAt": startedAt.UnixMilli()})
+		})
+	}
+
 	mux.HandleFunc("GET /api/chat", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, s.ListMessages())
 	})
@@ -402,6 +443,68 @@ func (qr *quoteRefresher) run() {
 		}
 	}
 	log.Printf("quotes: ciclo concluido (%d com preco, %d sem)", ok, failed)
+}
+
+// flightRefresher prices the trip's round trip(s) in the background, same
+// start/nextAllowed shape as quoteRefresher but with no loop() — see
+// flightCooldown for why this is manual-only.
+type flightRefresher struct {
+	fetcher *flights.Fetcher
+	store   *store.Store
+
+	mu      sync.Mutex
+	running bool
+	last    time.Time
+}
+
+func (fr *flightRefresher) start() (time.Time, time.Duration, bool) {
+	fr.mu.Lock()
+	defer fr.mu.Unlock()
+
+	if fr.running {
+		return time.Time{}, flightCooldown, false
+	}
+	if wait := time.Until(fr.last.Add(flightCooldown)); wait > 0 {
+		return time.Time{}, wait, false
+	}
+
+	startedAt := time.Now()
+	fr.running = true
+	go fr.run()
+	return startedAt, 0, true
+}
+
+func (fr *flightRefresher) nextAllowed() time.Time {
+	fr.mu.Lock()
+	defer fr.mu.Unlock()
+	return fr.last.Add(flightCooldown)
+}
+
+func (fr *flightRefresher) run() {
+	defer func() {
+		fr.mu.Lock()
+		fr.running = false
+		fr.last = time.Now()
+		fr.mu.Unlock()
+	}()
+
+	for _, spec := range flights.Routes {
+		// Fetch makes up to two sequential SerpApi calls (outbound, then
+		// return); this must comfortably cover both at the Fetcher's own 45s
+		// client timeout each.
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+		q := fr.fetcher.Fetch(ctx, spec)
+		cancel()
+
+		if q.Err != "" {
+			log.Printf("flights: %s (%s): %s", spec.ID, flights.RedactedURL(spec), q.Err)
+		} else {
+			log.Printf("flights: %s: %s %s", spec.ID, q.Price, q.Currency)
+		}
+		if err := fr.store.SetFlightQuote(q); err != nil {
+			log.Printf("flights: cache %s: %v", spec.ID, err)
+		}
+	}
 }
 
 func envOr(key, fallback string) string {

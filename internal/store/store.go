@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"viagem/internal/flights"
 	"viagem/internal/quotes"
 )
 
@@ -27,9 +28,10 @@ type Message struct {
 }
 
 type data struct {
-	Photos   []Photo                 `json:"photos"`
-	Messages []Message               `json:"messages"`
-	Quotes   map[string]quotes.Quote `json:"quotes,omitempty"`
+	Photos   []Photo                  `json:"photos"`
+	Messages []Message                `json:"messages"`
+	Quotes   map[string]quotes.Quote  `json:"quotes,omitempty"`
+	Flights  map[string]flights.Quote `json:"flights,omitempty"`
 }
 
 type Store struct {
@@ -131,6 +133,30 @@ func (s *Store) SetQuote(q quotes.Quote) error {
 		s.data.Quotes = make(map[string]quotes.Quote)
 	}
 	s.data.Quotes[q.ID] = q
+	return s.saveLocked()
+}
+
+// ListFlightQuotes returns the cached flight quotes keyed by route ID.
+func (s *Store) ListFlightQuotes() map[string]flights.Quote {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make(map[string]flights.Quote, len(s.data.Flights))
+	for k, v := range s.data.Flights {
+		out[k] = v
+	}
+	return out
+}
+
+// SetFlightQuote caches one flight quote, replacing any earlier result for
+// that route. A failed attempt is cached too, so the page can show why a
+// price is missing instead of silently rendering nothing.
+func (s *Store) SetFlightQuote(q flights.Quote) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.data.Flights == nil {
+		s.data.Flights = make(map[string]flights.Quote)
+	}
+	s.data.Flights[q.ID] = q
 	return s.saveLocked()
 }
 

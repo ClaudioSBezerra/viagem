@@ -569,7 +569,7 @@
       </div>
       <div class="card-body">
         <div class="note">Retirada do carro sugerida no dia 17/10, ao sair de Lisboa — nos 2 primeiros dias, cidade a pé/Uber é mais prático que carro.</div>
-        <div class="actions">
+        <div class="actions" data-flight="gyn-lis">
           <a class="btn-sm view" href="https://www.google.com/search?q=Aeroporto+Humberto+Delgado+Lisboa&tbm=isch" target="_blank" rel="noopener">Ver fotos do aeroporto</a>
           <a class="btn-sm flights" href="https://www.google.com/travel/flights?q=Voos%20de%20Goi%C3%A2nia%20para%20Lisboa%20em%2014%20de%20outubro%20de%202026%20para%202%20passageiros" target="_blank" rel="noopener">✈️ Ver voos (Google Flights)</a>
         </div>
@@ -1126,7 +1126,7 @@
       </div>
       <div class="card-body">
         <div class="note">Chegar ao aeroporto com 2h30–3h de antecedência. Devolvam o carro com tanque cheio e fotografem o veículo antes de entregar.</div>
-        <div class="actions">
+        <div class="actions" data-flight="gyn-lis">
           <a class="btn-sm flights" href="https://www.google.com/travel/flights?q=Voos%20de%20Lisboa%20para%20Goi%C3%A2nia%20em%2031%20de%20outubro%20de%202026%20para%202%20passageiros" target="_blank" rel="noopener">✈️ Ver voos (Google Flights)</a>
         </div>
       </div>
@@ -1152,6 +1152,10 @@
   <div class="quote-bar" id="quote-bar" hidden>
     <button type="button" id="quote-refresh">💰 Atualizar cotações</button>
     <span id="quote-status"></span>
+  </div>
+  <div class="quote-bar" id="flight-bar" hidden>
+    <button type="button" id="flight-refresh">✈️ Cotar passagem (ida e volta)</button>
+    <span id="flight-status"></span>
   </div>
 </div>
 
@@ -1353,6 +1357,11 @@
     return 'há ' + Math.round(hrs / 24) + 'd';
   }
 
+  function sourceLabel(source){
+    const labels = { booking: 'Booking', 'serpapi-google-flights': 'Google Flights' };
+    return labels[source] || source || '';
+  }
+
   function renderQuotes(quotes){
     document.querySelectorAll('[data-quote]').forEach(el => {
       const q = quotes[el.dataset.quote];
@@ -1365,17 +1374,18 @@
         badge = document.createElement('span');
         el.appendChild(badge);
       }
+      const via = sourceLabel(q.source) ? ' · ' + sourceLabel(q.source) : '';
       if(q.price){
         const nights = q.nights ? ' · ' + q.nights + (q.nights > 1 ? ' noites' : ' noite') : '';
         badge.className = 'quote-badge';
         badge.removeAttribute('title');
         badge.innerHTML = '<span class="val">' + escapeHtml(q.price) + '</span>' +
-                          '<span class="when">' + escapeHtml(timeAgo(q.ts) + nights) + '</span>';
+                          '<span class="when">' + escapeHtml(timeAgo(q.ts) + nights + via) + '</span>';
       }else{
         badge.className = 'quote-badge err';
         badge.title = q.error || 'sem detalhes';
         badge.innerHTML = '<span class="val">sem cotação</span>' +
-                          '<span class="when">' + escapeHtml(timeAgo(q.ts)) + '</span>';
+                          '<span class="when">' + escapeHtml(timeAgo(q.ts) + via) + '</span>';
       }
     });
   }
@@ -1463,6 +1473,114 @@
     });
   }
 
+  /* ---------------- COTAÇÃO DE PASSAGEM ---------------- */
+  /* Mesmo esquema de cache/timestamp dos hotéis, mas via uma API de verdade
+     (FlightAPI, JSON) em vez de raspar HTML — e sem loop automático: a cota
+     gratuita da FlightAPI é poucas chamadas no total, então só roda quando
+     alguém clica, limitado por um cooldown bem mais longo no servidor. */
+  function renderFlightQuotes(flights){
+    document.querySelectorAll('[data-flight]').forEach(el => {
+      const q = flights[el.dataset.flight];
+      let badge = el.querySelector('.quote-badge');
+      if(!q){
+        if(badge) badge.remove();
+        return;
+      }
+      if(!badge){
+        badge = document.createElement('span');
+        el.appendChild(badge);
+      }
+      const via = sourceLabel(q.source) ? ' · ' + sourceLabel(q.source) : '';
+      if(q.price){
+        badge.className = 'quote-badge';
+        badge.removeAttribute('title');
+        badge.innerHTML = '<span class="val">' + escapeHtml(q.currency + ' ' + q.price) + '</span>' +
+                          '<span class="when">' + escapeHtml(timeAgo(q.ts) + via) + '</span>';
+      }else{
+        badge.className = 'quote-badge err';
+        badge.title = q.error || 'sem detalhes';
+        badge.innerHTML = '<span class="val">sem cotação</span>' +
+                          '<span class="when">' + escapeHtml(timeAgo(q.ts) + via) + '</span>';
+      }
+    });
+  }
+
+  async function initFlightQuotes(){
+    const bar = document.getElementById('flight-bar');
+    const statusText = document.getElementById('flight-status');
+    const btn = document.getElementById('flight-refresh');
+
+    async function load(){
+      const data = await api('/api/flights');
+      const flights = data.flights || {};
+      renderFlightQuotes(flights);
+      return flights;
+    }
+
+    let flightQuotes;
+    try{
+      flightQuotes = await load();
+    }catch(e){
+      return; // cotação de voo desligada no servidor (sem FLIGHTAPI_KEY)
+    }
+    bar.hidden = false;
+
+    const total = document.querySelectorAll('[data-flight]').length;
+    if(!Object.keys(flightQuotes).length){
+      statusText.textContent = 'Ainda sem cotação — a cota gratuita da FlightAPI é limitada, use com moderação.';
+    }else{
+      statusText.textContent = countPriced(flightQuotes) + ' de ' + total + ' trecho(s) com preço.';
+    }
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      statusText.textContent = 'Buscando preço da passagem…';
+
+      const res = await fetch('/api/flights/refresh', { method: 'POST' });
+      if(res.status === 429){
+        let wait = 0;
+        try{ wait = (await res.json()).retryAfter || 0; }catch(e){}
+        statusText.textContent = 'Cotação recente demais — tente de novo em ' +
+                                 Math.ceil(wait / 3600) + 'h.';
+        btn.disabled = false;
+        return;
+      }
+      if(!res.ok){
+        statusText.textContent = 'Não consegui iniciar a busca agora.';
+        btn.disabled = false;
+        return;
+      }
+
+      let startedAt = Date.now();
+      try{
+        const data = await res.json();
+        if(typeof data.startedAt === 'number') startedAt = data.startedAt;
+      }catch(e){}
+
+      /* Preço de ida-e-volta exige duas chamadas sequenciais no servidor
+         (ida, depois volta com o token) — a espera aqui cobre isso (até
+         ~120s) em vez de desistir cedo demais. */
+      for(let i = 0; i < 24; i++){
+        await new Promise(r => setTimeout(r, 5000));
+        let updated;
+        try{
+          updated = await load();
+        }catch(e){
+          continue;
+        }
+        const done = Object.values(updated).filter(q => q.ts >= startedAt).length;
+        if(done >= total){
+          break;
+        }
+      }
+
+      try{
+        statusText.textContent = countPriced(await load()) + ' de ' + total + ' trecho(s) com preço.';
+      }catch(e){}
+      btn.disabled = false;
+    });
+  }
+
   (async function boot(){
     try{
       await api('/api/photos');
@@ -1474,6 +1592,7 @@
     initGallery();
     initChat();
     initQuotes();
+    initFlightQuotes();
   })();
 })();
 </script>
