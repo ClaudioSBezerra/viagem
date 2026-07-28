@@ -1491,16 +1491,17 @@
         el.appendChild(badge);
       }
       const via = sourceLabel(q.source) ? ' · ' + sourceLabel(q.source) : '';
+      const trecho = q.label ? q.label + ' · ' : '';
       if(q.price){
         badge.className = 'quote-badge';
         badge.removeAttribute('title');
         badge.innerHTML = '<span class="val">' + escapeHtml(q.currency + ' ' + q.price) + '</span>' +
-                          '<span class="when">' + escapeHtml(timeAgo(q.ts) + via) + '</span>';
+                          '<span class="when">' + escapeHtml(trecho + timeAgo(q.ts) + via) + '</span>';
       }else{
         badge.className = 'quote-badge err';
         badge.title = q.error || 'sem detalhes';
         badge.innerHTML = '<span class="val">sem cotação</span>' +
-                          '<span class="when">' + escapeHtml(timeAgo(q.ts) + via) + '</span>';
+                          '<span class="when">' + escapeHtml(trecho + timeAgo(q.ts) + via) + '</span>';
       }
     });
   }
