@@ -641,8 +641,18 @@
     #alt-search .sub, .alt-status{color:#333;}
     .alt-form{display:none !important;}
     /* Miami/Fort Lauderdale é uma busca de destino à parte, não faz parte
-       deste roteiro — some do PDF em vez de imprimir junto. */
+       do roteiro Ibérico — some do PDF principal por padrão. O botão "Baixar
+       PDF" de dentro do próprio painel Miami inverte isso via
+       body.print-miami: some o roteiro Ibérico e mostra só o resultado da
+       busca Miami, pra gerar um PDF separado sob demanda. */
     #miami-search{display:none !important;}
+    #miami-search h3{color:#000;}
+    #miami-print-pdf{display:none !important;}
+    body.print-miami .hero, body.print-miami .timeline,
+    body.print-miami #resumo, body.print-miami #alt-search{display:none !important;}
+    body.print-miami #miami-search{display:block !important;}
+    #miami-result .resumo-box{break-inside:avoid;}
+    #miami-result .miami-best{color:#A6503B;}
   }
 </style>
 </head>
@@ -1286,6 +1296,7 @@
     <button type="button" id="miami-refresh">Buscar melhores datas</button>
   </div>
   <p id="miami-status" class="alt-status"></p>
+  <button type="button" class="btn btn-ghost btn-sm" id="miami-print-pdf" style="margin-bottom:0.8rem;">🖨️ Baixar PDF desta busca</button>
   <div id="miami-result"></div>
 </div>
 
@@ -1739,6 +1750,11 @@
     return '<div class="resumo-line"><span>' + escapeHtml(label + classTag) + '</span><span>' + escapeHtml(val) + '</span></div>';
   }
 
+  // Só pra rotular a origem na linha-resumo abaixo — mesmo mapa GYN/BSB do
+  // servidor (internal/miami.Origins), pequeno o bastante pra duplicar aqui
+  // em vez de expor mais um endpoint só pra isso.
+  const MIAMI_ORIGIN_LABELS = { GYN: 'Goiânia (GYN)', BSB: 'Brasília (BSB)' };
+
   function renderMiamiResult(run){
     const box = document.getElementById('miami-result');
     if(!box) return;
@@ -1755,7 +1771,11 @@
       return a.t.total - b.t.total;
     });
 
-    box.innerHTML = rows.map(({c, t}, idx) => {
+    const originLabel = MIAMI_ORIGIN_LABELS[run.origin] || run.origin;
+    const summary = '<p class="alt-status">Janela buscada: ' + escapeHtml(run.windowStart) + ' a ' + escapeHtml(run.windowEnd) +
+      ' · ' + run.nights + ' noites · saindo de ' + escapeHtml(originLabel) + '</p>';
+
+    const cards = rows.map(({c, t}, idx) => {
       const flightVal = !c.flight || !c.flight.ts
         ? 'cotando…'
         : (c.flight.price ? (c.flight.currency + ' ' + c.flight.price) : (c.flight.error || 'sem cotação'));
@@ -1767,6 +1787,8 @@
         hotelLine('Fort Lauderdale', c.fortLauderdale) +
         '</div>';
     }).join('');
+
+    box.innerHTML = summary + cards;
   }
 
   function initMiamiSearch(){
@@ -1777,7 +1799,28 @@
     const originSelect = document.getElementById('miami-origin');
     const btn = document.getElementById('miami-refresh');
     const statusText = document.getElementById('miami-status');
+    const printBtn = document.getElementById('miami-print-pdf');
     panel.hidden = false;
+
+    // "Baixar PDF desta busca": window.print() sempre imprime a página
+    // inteira, então pra gerar um PDF só do resultado Miami — sem o roteiro
+    // Ibérico junto — a página entra num modo temporário (body.print-miami)
+    // que a regra @media print usa pra trocar o que fica visível, e sai
+    // desse modo assim que a caixa de impressão fecha.
+    printBtn.addEventListener('click', () => {
+      if(!document.getElementById('miami-result').children.length){
+        alert('Faça uma busca primeiro pra ter o que baixar em PDF.');
+        return;
+      }
+      document.body.classList.add('print-miami');
+      const cleanup = () => document.body.classList.remove('print-miami');
+      window.addEventListener('afterprint', cleanup, { once: true });
+      window.print();
+      // Reforço pro caso o navegador não dispare afterprint (raro, mas
+      // acontece em alguns webviews) — sem isso a página ficaria travada
+      // no modo "só Miami" até a próxima recarga.
+      setTimeout(cleanup, 3000);
+    });
 
     btn.addEventListener('click', async () => {
       const windowStart = startInput.value;
