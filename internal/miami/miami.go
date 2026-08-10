@@ -1,21 +1,30 @@
 // Package miami implements the flexible-date search for a possible second
-// trip — Miami/Fort Lauderdale, maio 2027 — separate from the Iberian
-// itinerary the rest of this app plans. Given a window of dates and a
-// desired stay length, it samples a handful of candidate departure dates
-// spread evenly across the window and prices a round-trip flight plus the
-// cheapest qualifying hotel in Downtown Miami and in Fort Lauderdale for
-// each one, so the group can compare which specific week is cheapest
-// instead of guessing.
+// trip — separate from the Iberian itinerary the rest of this app plans.
+// Given a window of dates, a desired stay length, a destination airport and
+// one or two hotel-search cities, it samples a handful of candidate
+// departure dates spread evenly across the window and prices a round-trip
+// flight plus the cheapest qualifying hotel in each city for each one, so
+// the group can compare which specific week (and which of the cities) is
+// cheapest instead of guessing.
 //
-// This intentionally does not search every day in the window: at up to 4
-// SerpApi searches per candidate (round-trip flight + one hotel search per
-// city), a full month would cost 100+ calls against the same shared quota
-// hotels/flights above depend on. MaxCandidates bounds that; see
-// miamiCooldown in main.go for the resulting cooldown.
+// The name and the "miami-search" API route predate this becoming
+// destination-agnostic — it started as a Miami/Fort Lauderdale-only search
+// (maio 2027) and the caller now picks the destination and hotel cities
+// instead of them being fixed in code, but renaming the route/package felt
+// like unnecessary churn for what's still the same shape of search.
+//
+// This intentionally does not search every day in the window: at up to
+// 1+MaxHotelCities SerpApi searches per candidate (round-trip flight costs
+// two calls, one hotel search per city), a full month would cost 100+ calls
+// against the same shared quota hotels/flights above depend on.
+// MaxCandidates bounds that; see miamiCooldown in main.go for the resulting
+// cooldown.
 package miami
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
 )
 
@@ -34,11 +43,10 @@ const (
 // is excluded rather than just deprioritized.
 const MaxHotelClass = 4
 
-// Dest is the arrival airport priced for every candidate: Miami
-// International. Both Downtown Miami and Fort Lauderdale hotels are a
-// ~30-40min ride from MIA, so this stays fixed instead of also pricing FLL
-// and doubling the flight searches per candidate.
-const Dest = "MIA"
+// MaxHotelCities caps how many hotel-search areas one request can compare —
+// each extra city costs one more SerpApi search per candidate, same
+// reasoning as MaxCandidates.
+const MaxHotelCities = 2
 
 // Origins lists the airports the search form may pick as departure, both
 // close enough to the group to be interchangeable.
@@ -47,17 +55,55 @@ var Origins = map[string]string{
 	"BSB": "Brasília",
 }
 
+var airportCodeRe = regexp.MustCompile(`^[A-Z]{3}$`)
+
+// ValidAirportCode reports whether code is a well-formed 3-letter IATA
+// airport code once trimmed and uppercased.
+func ValidAirportCode(code string) bool {
+	return airportCodeRe.MatchString(strings.ToUpper(strings.TrimSpace(code)))
+}
+
 // CitySpec is one hotel search area.
 type CitySpec struct {
-	ID   string // result key
+	ID   string // result key, derived from Name
 	Name string // search text sent to SerpApi
 }
 
-// HotelCities are the two areas to compare — both recommended over Miami
-// Beach for being walkable/practical without the beachfront premium.
-var HotelCities = []CitySpec{
-	{ID: "downtown-miami", Name: "Downtown Miami"},
-	{ID: "fort-lauderdale", Name: "Fort Lauderdale"},
+var slugNonAlnum = regexp.MustCompile(`[^a-z0-9]+`)
+
+// slugify turns a city name into a stable, URL/JSON-key-safe ID. It doesn't
+// bother transliterating accents — non-ASCII runes just fall out as
+// separators — since the result is only ever used as an internal map/JSON
+// key, never shown to anyone; CitySpec.Name carries the real display text.
+func slugify(name string) string {
+	s := slugNonAlnum.ReplaceAllString(strings.ToLower(name), "-")
+	return strings.Trim(s, "-")
+}
+
+// ParseHotelCities splits a "cidades para hotel" form field (comma-separated
+// free text) into up to MaxHotelCities named searches, deduplicated by slug.
+func ParseHotelCities(raw string) ([]CitySpec, error) {
+	var out []CitySpec
+	seen := map[string]bool{}
+	for _, part := range strings.Split(raw, ",") {
+		name := strings.TrimSpace(part)
+		if name == "" {
+			continue
+		}
+		id := slugify(name)
+		if id == "" || seen[id] {
+			continue
+		}
+		seen[id] = true
+		out = append(out, CitySpec{ID: id, Name: name})
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("informe ao menos uma cidade para buscar hotel")
+	}
+	if len(out) > MaxHotelCities {
+		return nil, fmt.Errorf("no maximo %d cidades para comparar", MaxHotelCities)
+	}
+	return out, nil
 }
 
 // HotelFilters is passed to quotes.CityQuery.RequireAll for every search:

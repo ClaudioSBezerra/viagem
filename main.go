@@ -61,12 +61,12 @@ const (
 	tripStartDate = "2026-10-14"
 	tripEndDate   = "2026-10-31"
 
-	// miamiCooldown gates the Miami/Fort Lauderdale flexible-date search
-	// (internal/miami): each run prices up to miami.MaxCandidates candidate
-	// weeks, each costing up to 4 SerpApi searches (round-trip flight + one
-	// hotel search per city) — as many as ~32 searches against the same
-	// shared quota as everything else above, the steepest single click in
-	// this app, so it gets the longest cooldown.
+	// miamiCooldown gates the flexible-date/destination search (internal/
+	// miami): each run prices up to miami.MaxCandidates candidate weeks,
+	// each costing up to 1+miami.MaxHotelCities SerpApi searches (round-trip
+	// flight + one hotel search per city) — as many as ~32 searches against
+	// the same shared quota as everything else above, the steepest single
+	// click in this app, so it gets the longest cooldown.
 	miamiCooldown = 12 * time.Hour
 	miamiSpacing  = 5 * time.Second
 )
@@ -149,13 +149,15 @@ func main() {
 		log.Printf("alt-search: disabled (precisa de quotes e flights habilitados)")
 	}
 
-	// Miami/Fort Lauderdale (maio 2027): a second, unrelated destination
-	// search, not part of the Iberian itinerary above — shares the same
-	// SerpApi fetchers (and quota) so it only runs when both are enabled.
+	// Flexible-date, flexible-destination search (started as Miami/Fort
+	// Lauderdale-only, maio 2027 — see internal/miami's doc comment): a
+	// second, unrelated destination search, not part of the Iberian
+	// itinerary above — shares the same SerpApi fetchers (and quota) so it
+	// only runs when both are enabled.
 	miamiEnabled := quotesEnabled && flightsEnabled
 	miamiRefresh := &miamiRefresher{hotelFetcher: refresher.fetcher, flightFetcher: flightRefresh.fetcher, store: s}
 	if miamiEnabled {
-		log.Printf("miami-search: enabled (busca de melhores datas Miami/Fort Lauderdale, ate %d candidatas, cooldown de %s)", miami.MaxCandidates, miamiCooldown)
+		log.Printf("miami-search: enabled (busca de melhores datas/destino flexivel, ate %d candidatas x %d cidades, cooldown de %s)", miami.MaxCandidates, miami.MaxHotelCities, miamiCooldown)
 	} else {
 		log.Printf("miami-search: disabled (precisa de quotes e flights habilitados)")
 	}
@@ -385,13 +387,13 @@ func main() {
 
 	if miamiEnabled {
 		// Unrelated to the Iberian roteiro above: a flexible-date search for
-		// a possible Miami/Fort Lauderdale trip in maio 2027. The caller
-		// gives a window (windowStart/windowEnd), a stay length (nights) and
-		// a departure airport; the server samples up to miami.MaxCandidates
-		// departure dates inside that window and prices each one (flight +
-		// cheapest qualifying hotel per city). Results are polled via GET,
-		// since pricing every candidate takes far longer than the write
-		// timeout.
+		// a possible second trip. The caller gives a window (windowStart/
+		// windowEnd), a stay length (nights), a departure airport, a
+		// destination airport and one or two hotel-search cities; the server
+		// samples up to miami.MaxCandidates departure dates inside that
+		// window and prices each one (flight + cheapest qualifying hotel per
+		// city). Results are polled via GET, since pricing every candidate
+		// takes far longer than the write timeout.
 		mux.HandleFunc("GET /api/miami-search", func(w http.ResponseWriter, r *http.Request) {
 			run, _ := s.GetMiamiRun()
 			writeJSON(w, http.StatusOK, map[string]any{
@@ -406,6 +408,8 @@ func main() {
 				WindowEnd   string `json:"windowEnd"`
 				Nights      int    `json:"nights"`
 				Origin      string `json:"origin"`
+				Destination string `json:"destination"` // arrival airport, IATA code
+				HotelCities string `json:"hotelCities"`  // comma-separated free text
 			}
 			if !decodeJSON(w, r, &body) {
 				return
@@ -415,13 +419,23 @@ func main() {
 				writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": "origem invalida (use GYN ou BSB)"})
 				return
 			}
+			dest := strings.ToUpper(strings.TrimSpace(body.Destination))
+			if !miami.ValidAirportCode(dest) {
+				writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": "aeroporto de destino invalido (codigo IATA de 3 letras, ex: MIA)"})
+				return
+			}
+			hotelCities, err := miami.ParseHotelCities(body.HotelCities)
+			if err != nil {
+				writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
+				return
+			}
 			candidates, err := miami.Window(body.WindowStart, body.WindowEnd, body.Nights)
 			if err != nil {
 				writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
 				return
 			}
 
-			startedAt, wait, ok := miamiRefresh.start(body.WindowStart, body.WindowEnd, body.Nights, body.Origin, candidates)
+			startedAt, wait, ok := miamiRefresh.start(body.WindowStart, body.WindowEnd, body.Nights, body.Origin, dest, hotelCities, candidates)
 			if !ok {
 				writeJSON(w, http.StatusTooManyRequests, map[string]any{
 					"error":      "busca recente demais, aguarde (cota compartilhada com hoteis e voo)",
@@ -431,9 +445,10 @@ func main() {
 			}
 
 			writeJSON(w, http.StatusAccepted, map[string]any{
-				"started":    true,
-				"startedAt":  startedAt.UnixMilli(),
-				"candidates": len(candidates),
+				"started":     true,
+				"startedAt":   startedAt.UnixMilli(),
+				"candidates":  len(candidates),
+				"hotelCities": len(hotelCities),
 			})
 		})
 	}
@@ -721,12 +736,12 @@ func (ar *altRefresher) run(startDate string) {
 	log.Printf("alt-search: ciclo concluido para %s (%d com preco, %d sem)", startDate, ok, failed)
 }
 
-// miamiRefresher prices a Miami/Fort Lauderdale flexible-date search in the
+// miamiRefresher prices a flexible-date, flexible-destination search in the
 // background: same start/nextAllowed/single-run-at-a-time shape as the other
-// refreshers above, but the result is a whole run (candidates.go's
-// store.MiamiRun) rather than one Quote per known ID, since the candidate
-// dates are picked fresh from the caller's window on every search instead of
-// coming from a fixed table like quotes.Stays/flights.Routes.
+// refreshers above, but the result is a whole run (store.MiamiRun) rather
+// than one Quote per known ID, since both the candidate dates and the
+// destination/hotel cities are picked fresh from the caller on every search
+// instead of coming from a fixed table like quotes.Stays/flights.Routes.
 type miamiRefresher struct {
 	hotelFetcher  *quotes.Fetcher
 	flightFetcher *flights.Fetcher
@@ -737,7 +752,7 @@ type miamiRefresher struct {
 	last    time.Time
 }
 
-func (mr *miamiRefresher) start(windowStart, windowEnd string, nights int, origin string, candidates []miami.Candidate) (time.Time, time.Duration, bool) {
+func (mr *miamiRefresher) start(windowStart, windowEnd string, nights int, origin, dest string, hotelCities []miami.CitySpec, candidates []miami.Candidate) (time.Time, time.Duration, bool) {
 	mr.mu.Lock()
 	defer mr.mu.Unlock()
 
@@ -750,7 +765,7 @@ func (mr *miamiRefresher) start(windowStart, windowEnd string, nights int, origi
 
 	startedAt := time.Now()
 	mr.running = true
-	go mr.run(startedAt, windowStart, windowEnd, nights, origin, candidates)
+	go mr.run(startedAt, windowStart, windowEnd, nights, origin, dest, hotelCities, candidates)
 	return startedAt, 0, true
 }
 
@@ -760,7 +775,7 @@ func (mr *miamiRefresher) nextAllowed() time.Time {
 	return mr.last.Add(miamiCooldown)
 }
 
-func (mr *miamiRefresher) run(startedAt time.Time, windowStart, windowEnd string, nights int, origin string, candidates []miami.Candidate) {
+func (mr *miamiRefresher) run(startedAt time.Time, windowStart, windowEnd string, nights int, origin, dest string, hotelCities []miami.CitySpec, candidates []miami.Candidate) {
 	defer func() {
 		mr.mu.Lock()
 		mr.running = false
@@ -773,11 +788,19 @@ func (mr *miamiRefresher) run(startedAt time.Time, windowStart, windowEnd string
 		WindowEnd:   windowEnd,
 		Nights:      nights,
 		Origin:      origin,
+		Dest:        dest,
 		StartedAt:   startedAt.UnixMilli(),
 		Candidates:  make([]store.MiamiCandidate, len(candidates)),
 	}
 	for i, c := range candidates {
-		run.Candidates[i] = store.MiamiCandidate{Depart: c.Depart, Return: c.Return}
+		// Hotels is pre-sized and pre-labeled (City set, everything else
+		// zero) so a still-pending row already shows which city it's for
+		// instead of a blank one while it waits its turn below.
+		hotels := make([]quotes.CityQuote, len(hotelCities))
+		for hi, city := range hotelCities {
+			hotels[hi] = quotes.CityQuote{ID: city.ID, City: city.Name}
+		}
+		run.Candidates[i] = store.MiamiCandidate{Depart: c.Depart, Return: c.Return, Hotels: hotels}
 	}
 	if err := mr.store.SetMiamiRun(run); err != nil {
 		log.Printf("miami-search: cache initial run: %v", err)
@@ -798,9 +821,9 @@ func (mr *miamiRefresher) run(startedAt time.Time, windowStart, windowEnd string
 		fctx, fcancel := context.WithTimeout(context.Background(), 100*time.Second)
 		fq := mr.flightFetcher.Fetch(fctx, flights.Spec{
 			ID:       fmt.Sprintf("miami-c%d", i),
-			Label:    fmt.Sprintf("%s → Miami (ida e volta)", miami.Origins[origin]),
+			Label:    fmt.Sprintf("%s → %s (ida e volta)", miami.Origins[origin], dest),
 			Origin:   origin,
-			Dest:     miami.Dest,
+			Dest:     dest,
 			Depart:   c.Depart,
 			Return:   c.Return,
 			Adults:   2,
@@ -810,12 +833,12 @@ func (mr *miamiRefresher) run(startedAt time.Time, windowStart, windowEnd string
 		run.Candidates[i].Flight = fq
 		if fq.Err != "" {
 			failed++
-			log.Printf("miami-search: voo %s->%s %s: %s", c.Depart, c.Return, origin, fq.Err)
+			log.Printf("miami-search: voo %s->%s %s->%s: %s", c.Depart, c.Return, origin, dest, fq.Err)
 		} else {
 			ok++
 		}
 
-		for _, city := range miami.HotelCities {
+		for hi, city := range hotelCities {
 			spaceOut()
 			hctx, hcancel := context.WithTimeout(context.Background(), 45*time.Second)
 			cq := mr.hotelFetcher.FetchCity(hctx, quotes.CityQuery{
@@ -834,11 +857,7 @@ func (mr *miamiRefresher) run(startedAt time.Time, windowStart, windowEnd string
 			} else {
 				ok++
 			}
-			if city.ID == "downtown-miami" {
-				run.Candidates[i].Downtown = cq
-			} else {
-				run.Candidates[i].FortLauderdale = cq
-			}
+			run.Candidates[i].Hotels[hi] = cq
 		}
 
 		if err := mr.store.SetMiamiRun(run); err != nil {

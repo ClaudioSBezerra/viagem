@@ -96,3 +96,58 @@ func TestOriginsKnownToServeMiami(t *testing.T) {
 		}
 	}
 }
+
+func TestValidAirportCode(t *testing.T) {
+	valid := []string{"MIA", "mia", "  MIA  ", "gyn"}
+	for _, code := range valid {
+		if !ValidAirportCode(code) {
+			t.Errorf("ValidAirportCode(%q) = false, want true", code)
+		}
+	}
+	invalid := []string{"", "MI", "MIAM", "MI1", "M-A", "米AI"}
+	for _, code := range invalid {
+		if ValidAirportCode(code) {
+			t.Errorf("ValidAirportCode(%q) = true, want false", code)
+		}
+	}
+}
+
+func TestParseHotelCitiesSplitsAndTrims(t *testing.T) {
+	got, err := ParseHotelCities("Downtown Miami,  Fort Lauderdale ")
+	if err != nil {
+		t.Fatalf("ParseHotelCities: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("got %d cities, want 2", len(got))
+	}
+	if got[0].Name != "Downtown Miami" || got[1].Name != "Fort Lauderdale" {
+		t.Errorf("got %+v", got)
+	}
+	if got[0].ID == "" || got[1].ID == "" || got[0].ID == got[1].ID {
+		t.Errorf("expected distinct non-empty IDs, got %q and %q", got[0].ID, got[1].ID)
+	}
+}
+
+func TestParseHotelCitiesRejectsEmpty(t *testing.T) {
+	for _, raw := range []string{"", "   ", ",  ,"} {
+		if _, err := ParseHotelCities(raw); err == nil {
+			t.Errorf("ParseHotelCities(%q): expected error for no cities", raw)
+		}
+	}
+}
+
+func TestParseHotelCitiesCapsAtMax(t *testing.T) {
+	if _, err := ParseHotelCities("Miami, Fort Lauderdale, Orlando"); err == nil {
+		t.Error("expected error for more than MaxHotelCities cities")
+	}
+}
+
+func TestParseHotelCitiesDedupesBySlug(t *testing.T) {
+	got, err := ParseHotelCities("Downtown Miami, downtown miami")
+	if err != nil {
+		t.Fatalf("ParseHotelCities: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("got %d cities, want 1 (duplicate should be dropped): %+v", len(got), got)
+	}
+}

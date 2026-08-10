@@ -35,19 +35,21 @@ type data struct {
 	Miami    *MiamiRun                `json:"miami,omitempty"`
 }
 
-// MiamiCandidate is one depart/return pair priced by a Miami/Fort Lauderdale
-// date search, along with the flight and the cheapest qualifying hotel found
-// in each candidate city. Sub-fields stay zero-valued until their fetch
-// completes — the frontend polls on that to show live progress.
+// MiamiCandidate is one depart/return pair priced by a flexible-date search
+// (internal/miami), along with the flight and the cheapest qualifying hotel
+// found in each requested city — Hotels is in the same order as the run's
+// hotel-city request every time. Sub-fields stay zero-valued (Ts == 0) until
+// their fetch completes — the frontend polls on that to show live progress;
+// City is pre-filled up front so a still-pending row still shows which city
+// it's for.
 type MiamiCandidate struct {
-	Depart         string           `json:"depart"`
-	Return         string           `json:"return"`
-	Flight         flights.Quote    `json:"flight"`
-	Downtown       quotes.CityQuote `json:"downtown"`
-	FortLauderdale quotes.CityQuote `json:"fortLauderdale"`
+	Depart string             `json:"depart"`
+	Return string             `json:"return"`
+	Flight flights.Quote      `json:"flight"`
+	Hotels []quotes.CityQuote `json:"hotels"`
 }
 
-// MiamiRun is the result of one Miami/Fort Lauderdale date search: the
+// MiamiRun is the result of one flexible-date destination search: the
 // parameters it was started with, plus every candidate priced so far. Only
 // the latest run is kept — a new search replaces it outright.
 type MiamiRun struct {
@@ -55,6 +57,7 @@ type MiamiRun struct {
 	WindowEnd   string           `json:"windowEnd"`
 	Nights      int              `json:"nights"`
 	Origin      string           `json:"origin"`
+	Dest        string           `json:"dest"` // destination airport, IATA code
 	StartedAt   int64            `json:"startedAt"`
 	Done        bool             `json:"done"`
 	Candidates  []MiamiCandidate `json:"candidates"`
@@ -186,7 +189,7 @@ func (s *Store) SetFlightQuote(q flights.Quote) error {
 	return s.saveLocked()
 }
 
-// GetMiamiRun returns the latest Miami/Fort Lauderdale date search, if any
+// GetMiamiRun returns the latest flexible-date destination search, if any
 // has run yet.
 func (s *Store) GetMiamiRun() (MiamiRun, bool) {
 	s.mu.Lock()
@@ -197,7 +200,7 @@ func (s *Store) GetMiamiRun() (MiamiRun, bool) {
 	return *s.data.Miami, true
 }
 
-// SetMiamiRun replaces the cached Miami/Fort Lauderdale run outright — called
+// SetMiamiRun replaces the cached flexible-date run outright — called
 // repeatedly as each candidate finishes pricing, so GetMiamiRun always
 // reflects live progress instead of only the finished result.
 func (s *Store) SetMiamiRun(r MiamiRun) error {
