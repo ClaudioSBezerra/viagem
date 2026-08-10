@@ -32,6 +32,32 @@ type data struct {
 	Messages []Message                `json:"messages"`
 	Quotes   map[string]quotes.Quote  `json:"quotes,omitempty"`
 	Flights  map[string]flights.Quote `json:"flights,omitempty"`
+	Miami    *MiamiRun                `json:"miami,omitempty"`
+}
+
+// MiamiCandidate is one depart/return pair priced by a Miami/Fort Lauderdale
+// date search, along with the flight and the cheapest qualifying hotel found
+// in each candidate city. Sub-fields stay zero-valued until their fetch
+// completes — the frontend polls on that to show live progress.
+type MiamiCandidate struct {
+	Depart         string           `json:"depart"`
+	Return         string           `json:"return"`
+	Flight         flights.Quote    `json:"flight"`
+	Downtown       quotes.CityQuote `json:"downtown"`
+	FortLauderdale quotes.CityQuote `json:"fortLauderdale"`
+}
+
+// MiamiRun is the result of one Miami/Fort Lauderdale date search: the
+// parameters it was started with, plus every candidate priced so far. Only
+// the latest run is kept — a new search replaces it outright.
+type MiamiRun struct {
+	WindowStart string           `json:"windowStart"`
+	WindowEnd   string           `json:"windowEnd"`
+	Nights      int              `json:"nights"`
+	Origin      string           `json:"origin"`
+	StartedAt   int64            `json:"startedAt"`
+	Done        bool             `json:"done"`
+	Candidates  []MiamiCandidate `json:"candidates"`
 }
 
 type Store struct {
@@ -157,6 +183,27 @@ func (s *Store) SetFlightQuote(q flights.Quote) error {
 		s.data.Flights = make(map[string]flights.Quote)
 	}
 	s.data.Flights[q.ID] = q
+	return s.saveLocked()
+}
+
+// GetMiamiRun returns the latest Miami/Fort Lauderdale date search, if any
+// has run yet.
+func (s *Store) GetMiamiRun() (MiamiRun, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.data.Miami == nil {
+		return MiamiRun{}, false
+	}
+	return *s.data.Miami, true
+}
+
+// SetMiamiRun replaces the cached Miami/Fort Lauderdale run outright — called
+// repeatedly as each candidate finishes pricing, so GetMiamiRun always
+// reflects live progress instead of only the finished result.
+func (s *Store) SetMiamiRun(r MiamiRun) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.data.Miami = &r
 	return s.saveLocked()
 }
 

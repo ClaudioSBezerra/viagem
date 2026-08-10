@@ -121,7 +121,8 @@
   body.hide-prices .quote-badge,
   body.hide-prices .quote-bar,
   body.hide-prices #resumo,
-  body.hide-prices #alt-search{display:none !important;}
+  body.hide-prices #alt-search,
+  body.hide-prices #miami-search{display:none !important;}
 
   /* ---------- LEGEND / INTRO ---------- */
   .intro{
@@ -439,6 +440,19 @@
   .alt-status{font-size:0.85rem; color:rgba(239,231,214,0.75); margin:0.7rem 0 0;}
   #alt-result .resumo-box{margin-top:0.6rem;}
 
+  /* Mesmo form usado pela busca de Miami/Fort Lauderdale, com dois campos a
+     mais (noites, origem) que .alt-form sozinho não cobria. */
+  .alt-form input[type="number"], .alt-form select{
+    background:var(--paper); color:var(--ink);
+    border:1px solid rgba(15,29,36,0.15);
+    border-radius:8px; padding:0.5rem 0.7rem;
+    font-family:'Inter',sans-serif; font-size:0.88rem;
+  }
+  .alt-form input[type="number"]{width:5rem;}
+  #miami-result .resumo-box{margin-bottom:0.8rem;}
+  #miami-result .resumo-box:last-child{margin-bottom:0;}
+  .miami-best{color:var(--brass);}
+
   footer{
     text-align:center;
     padding:2.5rem 1.5rem 3.5rem;
@@ -626,6 +640,9 @@
     #alt-search h3{color:#000;}
     #alt-search .sub, .alt-status{color:#333;}
     .alt-form{display:none !important;}
+    /* Miami/Fort Lauderdale é uma busca de destino à parte, não faz parte
+       deste roteiro — some do PDF em vez de imprimir junto. */
+    #miami-search{display:none !important;}
   }
 </style>
 </head>
@@ -1249,6 +1266,29 @@
   <div id="alt-result"></div>
 </div>
 
+<div class="panel" id="miami-search" hidden>
+  <h3>🏖️ Outro destino: Miami / Fort Lauderdale — maio 2027</h3>
+  <p class="sub" style="color:rgba(239,231,214,0.65); font-size:0.9rem; margin-top:-0.6rem; margin-bottom:1.1rem;">
+    Testa até 8 janelas de datas dentro do período informado, cotando voo (ida e volta) e o hotel mais barato até 4 estrelas com café da manhã e estacionamento incluídos, em Downtown Miami e em Fort Lauderdale — pra achar os dias mais baratos pra viajar. Cota compartilhada com as cotações acima e com "outra data" — usa bastante crédito de uma vez, então é limitado a 1 busca a cada 12h.
+  </p>
+  <div class="alt-form">
+    <label for="miami-start">Início da janela</label>
+    <input type="date" id="miami-start" value="2027-05-01">
+    <label for="miami-end">Término da janela</label>
+    <input type="date" id="miami-end" value="2027-05-31">
+    <label for="miami-nights">Noites</label>
+    <input type="number" id="miami-nights" min="2" max="21" value="7">
+    <label for="miami-origin">Saindo de</label>
+    <select id="miami-origin">
+      <option value="GYN">Goiânia (GYN)</option>
+      <option value="BSB">Brasília (BSB)</option>
+    </select>
+    <button type="button" id="miami-refresh">Buscar melhores datas</button>
+  </div>
+  <p id="miami-status" class="alt-status"></p>
+  <div id="miami-result"></div>
+</div>
+
 <div id="dicas" class="panel">
   <h3>Dicas rápidas para quem vai dirigir</h3>
   <div class="tips">
@@ -1661,6 +1701,166 @@
     });
   }
 
+  /* ---------------- OUTRO DESTINO: MIAMI / FORT LAUDERDALE ---------------- */
+  /* Busca de datas flexíveis pra um destino novo (maio 2027), sem relação com
+     o roteiro Ibérico acima. O servidor testa até 8 janelas de data dentro do
+     período informado e cota voo + hotel (Downtown Miami e Fort Lauderdale)
+     pra cada uma — essa função só lê o resultado e ordena pelo total mais
+     barato (voo + o mais barato dos dois hotéis). Mesmo esquema de
+     start/poll dos outros painéis, mas guardado como uma "run" inteira em vez
+     de cotações por ID fixo, já que as datas mudam a cada busca. */
+  let miamiSearchInited = false;
+
+  function maybeInitMiamiSearch(){
+    if(miamiSearchInited || !quotesOn || !flightsOn) return;
+    miamiSearchInited = true;
+    initMiamiSearch();
+  }
+
+  // Soma voo + o mais barato dos dois hotéis (o grupo ficaria numa cidade só,
+  // não nas duas), ou null se faltar preço de voo ou dos dois hotéis.
+  function candidateTotal(c){
+    if(!c.flight || !c.flight.price) return null;
+    const flight = parseValor(c.flight.price);
+    const downtown = c.downtown && c.downtown.price ? parseValor(c.downtown.price) : null;
+    const ftl = c.fortLauderdale && c.fortLauderdale.price ? parseValor(c.fortLauderdale.price) : null;
+    if(downtown === null && ftl === null) return null;
+    const cheapestHotel = Math.min(...[downtown, ftl].filter(v => v !== null));
+    const cheapestCity = cheapestHotel === downtown ? 'Downtown Miami' : 'Fort Lauderdale';
+    return { total: flight + cheapestHotel, cheapestCity };
+  }
+
+  function hotelLine(label, q){
+    if(!q || !q.ts){
+      return '<div class="resumo-line"><span>' + escapeHtml(label) + '</span><span>cotando…</span></div>';
+    }
+    const classTag = q.class ? ' (' + q.class + '★)' : '';
+    const val = q.price ? (q.price + (q.hotel ? ' · ' + q.hotel : '')) : (q.error || 'sem cotação');
+    return '<div class="resumo-line"><span>' + escapeHtml(label + classTag) + '</span><span>' + escapeHtml(val) + '</span></div>';
+  }
+
+  function renderMiamiResult(run){
+    const box = document.getElementById('miami-result');
+    if(!box) return;
+    if(!run || !run.candidates || !run.candidates.length){
+      box.innerHTML = '';
+      return;
+    }
+
+    const rows = run.candidates.map(c => ({ c, t: candidateTotal(c) }));
+    rows.sort((a, b) => {
+      if(a.t === null && b.t === null) return 0;
+      if(a.t === null) return 1;
+      if(b.t === null) return -1;
+      return a.t.total - b.t.total;
+    });
+
+    box.innerHTML = rows.map(({c, t}, idx) => {
+      const flightVal = !c.flight || !c.flight.ts
+        ? 'cotando…'
+        : (c.flight.price ? (c.flight.currency + ' ' + c.flight.price) : (c.flight.error || 'sem cotação'));
+      const best = idx === 0 && t ? ' <span class="miami-best">★ melhor opção (' + escapeHtml(t.cheapestCity) + ')</span>' : '';
+      return '<div class="resumo-box">' +
+        '<div class="resumo-line total"><span>' + escapeHtml(c.depart) + ' a ' + escapeHtml(c.return) + best + '</span><span>' + (t ? fmtBRL(t.total) : '—') + '</span></div>' +
+        '<div class="resumo-line"><span>Voo (ida e volta)</span><span>' + escapeHtml(flightVal) + '</span></div>' +
+        hotelLine('Downtown Miami', c.downtown) +
+        hotelLine('Fort Lauderdale', c.fortLauderdale) +
+        '</div>';
+    }).join('');
+  }
+
+  function initMiamiSearch(){
+    const panel = document.getElementById('miami-search');
+    const startInput = document.getElementById('miami-start');
+    const endInput = document.getElementById('miami-end');
+    const nightsInput = document.getElementById('miami-nights');
+    const originSelect = document.getElementById('miami-origin');
+    const btn = document.getElementById('miami-refresh');
+    const statusText = document.getElementById('miami-status');
+    panel.hidden = false;
+
+    btn.addEventListener('click', async () => {
+      const windowStart = startInput.value;
+      const windowEnd = endInput.value;
+      const nights = parseInt(nightsInput.value, 10);
+      const origin = originSelect.value;
+      if(!windowStart || !windowEnd || !nights){
+        statusText.textContent = 'Preencha início, término e noites.';
+        return;
+      }
+      btn.disabled = true;
+      statusText.textContent = 'Cotando as melhores datas…';
+      document.getElementById('miami-result').innerHTML = '';
+
+      let res;
+      try{
+        res = await fetch('/api/miami-search', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({windowStart, windowEnd, nights, origin})
+        });
+      }catch(e){
+        statusText.textContent = 'Não consegui iniciar a busca agora.';
+        btn.disabled = false;
+        return;
+      }
+
+      if(res.status === 422){
+        let msg = 'Parâmetros inválidos.';
+        try{ msg = (await res.json()).error || msg; }catch(e){}
+        statusText.textContent = msg;
+        btn.disabled = false;
+        return;
+      }
+      if(res.status === 429){
+        let wait = 0;
+        try{ wait = (await res.json()).retryAfter || 0; }catch(e){}
+        statusText.textContent = 'Busca recente demais — tente de novo em ' +
+                                 Math.ceil(wait / 3600) + 'h.';
+        btn.disabled = false;
+        return;
+      }
+      if(!res.ok){
+        statusText.textContent = 'Não consegui iniciar a busca agora.';
+        btn.disabled = false;
+        return;
+      }
+
+      let startedAt = Date.now();
+      let totalCandidates = 8;
+      try{
+        const data = await res.json();
+        if(typeof data.startedAt === 'number') startedAt = data.startedAt;
+        if(typeof data.candidates === 'number') totalCandidates = data.candidates;
+      }catch(e){}
+
+      const totalSearches = totalCandidates * 3; // voo + 2 cidades por candidata
+      for(let i = 0; i < 60; i++){
+        await new Promise(r => setTimeout(r, 5000));
+        let run;
+        try{
+          run = (await api('/api/miami-search')).run;
+        }catch(e){
+          continue;
+        }
+        if(!run || run.startedAt !== startedAt || !run.candidates) continue;
+
+        renderMiamiResult(run);
+        const done = run.candidates.reduce((n, c) =>
+          n + (c.flight && c.flight.ts ? 1 : 0) +
+              (c.downtown && c.downtown.ts ? 1 : 0) +
+              (c.fortLauderdale && c.fortLauderdale.ts ? 1 : 0), 0);
+        if(run.done){
+          statusText.textContent = 'Busca concluída — ' + run.candidates.length + ' janela(s) de data comparadas.';
+          break;
+        }
+        statusText.textContent = 'Cotando… ' + done + ' de ' + totalSearches + ' itens atualizados.';
+      }
+
+      btn.disabled = false;
+    });
+  }
+
   function renderQuotes(quotes){
     document.querySelectorAll('[data-quote]').forEach(el => {
       const q = quotes[el.dataset.quote];
@@ -1719,6 +1919,7 @@
     bar.hidden = false;
     quotesOn = true;
     maybeInitAltSearch();
+    maybeInitMiamiSearch();
 
     const total = document.querySelectorAll('[data-quote]').length;
     if(!Object.keys(quotes).length){
@@ -1836,6 +2037,7 @@
     bar.hidden = false;
     flightsOn = true;
     maybeInitAltSearch();
+    maybeInitMiamiSearch();
 
     const total = FLIGHT_ROUTES_TOTAL;
     if(!Object.keys(flightQuotes).length){

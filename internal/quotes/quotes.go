@@ -79,8 +79,9 @@ func NewFetcher(apiKey string) *Fetcher {
 }
 
 type hotelProperty struct {
-	Name                string `json:"name"`
-	ExtractedHotelClass int    `json:"extracted_hotel_class"`
+	Name                string   `json:"name"`
+	ExtractedHotelClass int      `json:"extracted_hotel_class"`
+	Amenities           []string `json:"amenities"`
 	TotalRate           struct {
 		ExtractedLowest float64 `json:"extracted_lowest"`
 	} `json:"total_rate"`
