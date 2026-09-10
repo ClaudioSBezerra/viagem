@@ -1,4 +1,4 @@
-# viagem — micro site do roteiro Ibérico (Coolify)
+# viagem — planejador de roteiros (Coolify)
 # Imagem única: binário Go com o site embutido (go:embed).
 
 FROM golang:1.26-alpine AS builder

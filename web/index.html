@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Roteiro Ibérico 2026 — Lisboa · Porto · Coruña · Madrid · Granada · Málaga · Sevilha · Salamanca</title>
+<title>Planejador de roteiros — monte a viagem e descubra a semana mais barata</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -13,13 +13,11 @@
     --night:#122630;
     --night-2:#183541;
     --paper:#EFE7D6;
-    --paper-2:#E4D9C2;
     --brass:#C79A3C;
     --rust:#A6503B;
     --teal:#3E6B63;
     --teal-light:#7FA79C;
     --line:rgba(239,231,214,0.18);
-    --shadow:0 18px 40px rgba(15,29,36,0.35);
     --radius:14px;
   }
   *{box-sizing:border-box;}
@@ -33,11 +31,12 @@
   }
   .mono{font-family:'IBM Plex Mono',monospace; letter-spacing:0.02em;}
   a{color:inherit;}
+  [hidden]{display:none !important;}
 
   /* ---------- HERO ---------- */
   .hero{
     position:relative;
-    padding:5.5rem 1.5rem 4rem;
+    padding:4.5rem 1.5rem 3rem;
     text-align:center;
     background:
       radial-gradient(ellipse at top, rgba(199,154,60,0.14), transparent 60%),
@@ -48,8 +47,7 @@
   .hero::before{
     content:"";
     position:absolute; inset:0;
-    background-image:
-      radial-gradient(circle, rgba(239,231,214,0.05) 1px, transparent 1px);
+    background-image:radial-gradient(circle, rgba(239,231,214,0.05) 1px, transparent 1px);
     background-size:22px 22px;
     opacity:0.5;
     pointer-events:none;
@@ -63,2123 +61,736 @@
     margin-bottom:1.1rem;
   }
   .hero h1{
-    font-family:'Fraunces',serif;
-    font-weight:700;
-    font-size:clamp(2.1rem, 5vw, 3.6rem);
-    margin:0 0 0.9rem;
-    letter-spacing:-0.01em;
+    font-family:'Fraunces',serif; font-weight:700;
+    font-size:clamp(2rem, 5vw, 3.2rem);
+    margin:0 0 0.9rem; letter-spacing:-0.01em;
   }
-  .hero h1 em{
-    font-style:italic;
-    font-weight:500;
-    color:var(--teal-light);
-  }
-  .hero p.sub{
-    max-width:620px;
-    margin:0 auto;
-    color:rgba(239,231,214,0.72);
-    font-size:1.02rem;
-  }
-  .hero-route{
-    margin-top:2.4rem;
-    font-family:'IBM Plex Mono',monospace;
-    font-size:0.78rem;
-    color:var(--teal-light);
-    letter-spacing:0.02em;
-    display:flex; flex-wrap:wrap; justify-content:center; gap:0.4rem 0.6rem;
-  }
-  .hero-route span.dot{color:var(--brass);}
+  .hero h1 em{font-style:italic; font-weight:500; color:var(--teal-light);}
+  .hero p.sub{max-width:620px; margin:0 auto; color:rgba(239,231,214,0.72); font-size:1.02rem;}
+  .quickbar{display:flex; flex-wrap:wrap; gap:0.75rem; justify-content:center; padding:1.6rem 1.5rem 0;}
 
-  /* ---------- QUICK ACTIONS ---------- */
-  .quickbar{
-    display:flex; flex-wrap:wrap; gap:0.75rem; justify-content:center;
-    padding:1.6rem 1.5rem 0;
-  }
+  /* ---------- BOTÕES ---------- */
   .btn{
     display:inline-flex; align-items:center; gap:0.5rem;
-    padding:0.65rem 1.15rem;
-    border-radius:999px;
-    font-size:0.88rem; font-weight:600;
-    text-decoration:none;
-    border:1px solid var(--line);
+    padding:0.65rem 1.15rem; border-radius:999px;
+    font-size:0.88rem; font-weight:600; text-decoration:none;
+    border:1px solid var(--line); cursor:pointer;
+    font-family:'Inter',sans-serif;
     transition:transform .15s ease, background .15s ease;
     white-space:nowrap;
   }
   .btn:hover{transform:translateY(-1px);}
+  .btn:disabled{opacity:0.55; cursor:wait; transform:none;}
   .btn-brass{background:var(--brass); color:var(--ink); border-color:var(--brass);}
   .btn-teal{background:var(--teal); color:var(--paper);}
   .btn-ghost{background:transparent; color:var(--paper);}
   .btn-ghost:hover{background:rgba(239,231,214,0.08);}
+  .btn-danger{background:transparent; color:var(--rust); border-color:rgba(166,80,59,0.5);}
+  .btn-danger:hover{background:rgba(166,80,59,0.12);}
   .btn-sm{padding:0.45rem 0.85rem; font-size:0.78rem; border-radius:8px;}
-  button.btn{font-family:inherit; cursor:pointer;}
-  label.price-toggle{cursor:pointer; user-select:none;}
-  label.price-toggle input{margin-right:0.4rem;}
 
-  /* Ligado por padrão; desmarcar some com todo preço/cotação — pensado pra
-     gerar uma versão limpa do roteiro (tela ou PDF) pra mandar pra uma
-     agência de turismo sem expor o que já foi cotado. */
-  body.hide-prices .quote-badge,
-  body.hide-prices .quote-bar,
-  body.hide-prices #resumo,
-  body.hide-prices #alt-search,
-  body.hide-prices #miami-search{display:none !important;}
+  /* ---------- PAINÉIS ---------- */
+  .panel{max-width:920px; margin:0 auto 4.5rem; padding:0 1.25rem;}
+  .panel h3{font-family:'Fraunces',serif; font-size:1.5rem; color:var(--brass); margin-bottom:1rem;}
+  .panel .sub{color:rgba(239,231,214,0.65); font-size:0.9rem; margin-top:-0.6rem; margin-bottom:1.1rem;}
+  .status{font-size:0.85rem; color:rgba(239,231,214,0.75); margin:0.7rem 0 0; min-height:1.2em;}
+  .status.err{color:var(--rust);}
 
-  /* ---------- LEGEND / INTRO ---------- */
-  .intro{
-    max-width:760px; margin:3.2rem auto 0; padding:0 1.5rem;
-    text-align:center;
-    color:rgba(239,231,214,0.75);
-    font-size:0.95rem;
+  /* ---------- LISTA DE ROTEIROS ---------- */
+  .trip-cards{display:grid; grid-template-columns:1fr; gap:0.8rem;}
+  @media (min-width:680px){ .trip-cards{grid-template-columns:1fr 1fr;} }
+  .trip-card{
+    text-align:left; width:100%;
+    background:var(--night-2); border:1px solid var(--line);
+    border-radius:12px; padding:1rem 1.1rem; cursor:pointer;
+    color:var(--paper); font-family:'Inter',sans-serif;
+    transition:border-color .15s ease, transform .15s ease;
   }
-  .intro strong{color:var(--paper);}
-
-  /* ---------- TIMELINE ---------- */
-  .timeline{
-    max-width:920px;
-    margin:4rem auto 6rem;
-    padding:0 1.25rem;
-    position:relative;
-  }
-  .timeline::before{
-    content:"";
-    position:absolute;
-    left:28px;
-    top:0; bottom:0;
-    width:2px;
-    background:repeating-linear-gradient(
-      to bottom, var(--brass) 0 6px, transparent 6px 14px
-    );
-  }
-  @media(min-width:720px){
-    .timeline::before{left:50%; margin-left:-1px;}
+  .trip-card:hover{border-color:var(--brass); transform:translateY(-1px);}
+  .trip-card .nome{font-family:'Fraunces',serif; font-size:1.15rem; display:block; margin-bottom:0.3rem;}
+  .trip-card .rota{font-family:'IBM Plex Mono',monospace; font-size:0.75rem; color:var(--teal-light); letter-spacing:0.04em;}
+  .trip-card .linha{font-size:0.83rem; color:rgba(239,231,214,0.7); margin-top:0.45rem;}
+  .trip-card .preco{color:var(--brass); font-weight:600;}
+  .empty{
+    border:1px dashed var(--line); border-radius:12px;
+    padding:2rem 1.2rem; text-align:center; color:rgba(239,231,214,0.6); font-size:0.9rem;
   }
 
-  .leg{
-    position:relative;
-    margin:0 0 0.4rem 64px;
-    padding:0.6rem 0 0.6rem 0.2rem;
-    font-family:'IBM Plex Mono',monospace;
-    font-size:0.78rem;
-    color:var(--teal-light);
+  /* ---------- FORMULÁRIO ---------- */
+  .form-row{display:flex; flex-wrap:wrap; align-items:center; gap:0.7rem; margin-bottom:0.8rem;}
+  .form-row label{font-size:0.88rem; color:rgba(239,231,214,0.85);}
+  .form-row input, .form-row select{
+    background:var(--paper); color:var(--ink);
+    border:1px solid rgba(15,29,36,0.15); border-radius:8px;
+    padding:0.5rem 0.7rem; font-family:'Inter',sans-serif; font-size:0.88rem;
   }
-  @media(min-width:720px){
-    .leg{margin-left:0; text-align:center; padding-left:0;}
-  }
-  .leg .leg-inner{
-    display:inline-flex; align-items:center; gap:0.6rem; flex-wrap:wrap;
-  }
-  .leg .arrow{color:var(--brass);}
+  .form-row input[type="number"]{width:5rem;}
+  .form-row .iata{width:5rem; text-transform:uppercase; font-family:'IBM Plex Mono',monospace;}
+  .form-row .nome{flex:1 1 16rem; min-width:0;}
 
-  .stop{
-    position:relative;
-    margin-left:64px;
-    margin-bottom:2.4rem;
+  .city-plan{margin:0.9rem 0; padding:0.9rem 1rem; border:1px solid rgba(239,231,214,0.16); border-radius:12px;}
+  .city-plan-head{
+    display:flex; justify-content:space-between; align-items:baseline; gap:1rem;
+    font-size:0.85rem; color:rgba(239,231,214,0.75); margin-bottom:0.7rem;
   }
-  @media(min-width:720px){
-    .stop{
-      width:46%;
-      margin-left:0;
-    }
-    .stop.right{margin-left:54%;}
+  .city-plan-total{color:var(--brass); font-weight:600; white-space:nowrap;}
+  .city-row{display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;}
+  .city-row .seq{width:1.5rem; flex:none; text-align:center; font-size:0.8rem; color:rgba(239,231,214,0.5);}
+  .city-row input[type="text"]{
+    flex:1 1 12rem; min-width:0;
+    background:var(--paper); color:var(--ink);
+    border:1px solid rgba(15,29,36,0.15); border-radius:8px;
+    padding:0.5rem 0.7rem; font-family:'Inter',sans-serif; font-size:0.88rem;
   }
-  .stop-marker{
-    position:absolute;
-    left:-52px; top:2px;
-    width:34px; height:34px;
-    border-radius:50%;
-    background:var(--night-2);
-    border:2px solid var(--brass);
-    display:flex; align-items:center; justify-content:center;
-    font-family:'IBM Plex Mono',monospace;
-    font-size:0.75rem; font-weight:600;
-    color:var(--brass);
-    z-index:2;
+  .city-row input[type="number"]{
+    width:4.5rem; flex:none;
+    background:var(--paper); color:var(--ink);
+    border:1px solid rgba(15,29,36,0.15); border-radius:8px;
+    padding:0.5rem 0.7rem; font-family:'Inter',sans-serif; font-size:0.88rem;
   }
-  @media(min-width:720px){
-    .stop-marker{left:auto; right:-63px;}
-    .stop.right .stop-marker{right:auto; left:-63px;}
+  .city-row .unit{font-size:0.8rem; color:rgba(239,231,214,0.55);}
+  .city-row .drop{
+    flex:none; background:none; border:none; cursor:pointer;
+    color:rgba(239,231,214,0.5); font-size:1.1rem; line-height:1; padding:0.2rem 0.4rem;
   }
-
-  .card{
-    background:var(--paper);
-    color:var(--ink);
-    border-radius:var(--radius);
-    box-shadow:var(--shadow);
-    overflow:hidden;
-  }
-  .card-head{
-    padding:1.3rem 1.4rem 0.9rem;
-    border-bottom:1px dashed rgba(15,29,36,0.15);
-  }
-  .card-head .dates{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:0.72rem;
-    text-transform:uppercase;
-    letter-spacing:0.08em;
-    color:var(--rust);
-    margin-bottom:0.35rem;
-  }
-  .card-head h2{
-    font-family:'Fraunces',serif;
-    font-weight:600;
-    font-size:1.5rem;
-    margin:0;
-  }
-  .card-head .nights{
-    font-size:0.82rem; color:rgba(15,29,36,0.6); margin-top:0.2rem;
-  }
-  .card-body{padding:1.1rem 1.4rem 1.4rem;}
-  .hotel{
-    font-size:1.08rem;
-    font-weight:600;
-    margin-bottom:0.9rem;
-  }
-  .hotel .label{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:0.68rem;
-    text-transform:uppercase;
-    letter-spacing:0.08em;
-    color:var(--teal);
-    display:block;
-    margin-bottom:0.15rem;
-  }
-  .note{
-    font-size:0.88rem;
-    color:rgba(15,29,36,0.72);
-    background:rgba(166,80,59,0.08);
-    border-left:3px solid var(--rust);
-    padding:0.6rem 0.8rem;
-    border-radius:0 8px 8px 0;
-    margin-bottom:0.9rem;
-  }
-  .actions{
-    display:flex; flex-wrap:wrap; gap:0.5rem;
-  }
-  .actions a.btn-sm{
-    background:var(--night);
-    color:var(--paper);
-    border:none;
-  }
-  .actions a.btn-sm.waze{background:#33CCFF; color:#08202B;}
-  .actions a.btn-sm.gmaps{background:#1a73e8; color:#fff;}
-  .actions a.btn-sm.photos{background:var(--teal); color:var(--paper);}
-  .actions a.btn-sm.view{background:transparent; color:var(--ink); border:1px solid rgba(15,29,36,0.25);}
-  .actions a.btn-sm.booking{background:#003580; color:#fff;}
-  .actions a.btn-sm.decolar{background:#00AECD; color:#08202B;}
-  .actions a.btn-sm.flights{background:#1a73e8; color:#fff;}
-
-  /* Cotação buscada pelo servidor e guardada em cache. */
-  .quote-badge{
-    display:inline-flex;
-    align-items:baseline;
-    gap:.4rem;
-    padding:.3rem .6rem;
-    border-radius:999px;
-    background:rgba(0,53,128,0.08);
-    border:1px solid rgba(0,53,128,0.25);
-    font-size:.82rem;
-    line-height:1.2;
-  }
-  .quote-badge .val{font-weight:700; color:#003580;}
-  .quote-badge .when{font-size:.72rem; opacity:.7;}
-  .quote-badge.err{
-    background:rgba(15,29,36,0.05);
-    border-color:rgba(15,29,36,0.18);
-    opacity:.75;
-  }
-  .quote-badge.err .val{color:var(--ink); font-weight:600;}
-
-  /* display:flex sobrepõe o atributo hidden, que age via display:none do
-     navegador — sem esta regra a barra aparece com as cotações desligadas. */
-  .quote-bar[hidden]{display:none;}
-  .quote-bar{
-    display:flex;
-    flex-wrap:wrap;
-    align-items:center;
-    gap:.6rem;
-    margin-top:.6rem;
-    font-size:.85rem;
-  }
-  .quote-bar button{
-    padding:.35rem .8rem;
-    border-radius:999px;
-    border:1px solid rgba(0,53,128,0.35);
-    background:#003580;
-    color:#fff;
-    font:inherit;
-    font-size:.82rem;
-    cursor:pointer;
-  }
-  .quote-bar button[disabled]{opacity:.55; cursor:default;}
-
-  .map-wrap{
-    margin-top:1rem;
-    border-radius:10px;
-    overflow:hidden;
-    border:1px solid rgba(15,29,36,0.12);
-  }
-  .map-wrap iframe{
-    width:100%; height:220px; border:0; display:block;
-  }
-  details.mapd summary{
-    cursor:pointer;
-    font-family:'IBM Plex Mono',monospace;
-    font-size:0.74rem;
-    text-transform:uppercase;
-    letter-spacing:0.06em;
-    color:var(--teal);
-    margin-top:0.9rem;
-    user-select:none;
+  .city-row .drop:hover{color:var(--brass);}
+  .actions{display:flex; gap:0.6rem; flex-wrap:wrap; margin-top:0.9rem;}
+  .actions .spacer{flex:1 1 auto;}
+  @media (max-width:560px){
+    .city-row{flex-wrap:wrap;}
+    .city-row input[type="text"]{flex:1 1 100%;}
+    .form-row .nome{flex:1 1 100%;}
   }
 
-  .dicas-local{
-    margin-top:0.8rem;
-    display:flex; flex-direction:column; gap:0.8rem;
-  }
-  .dicas-cat .dicas-label{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:0.68rem;
-    text-transform:uppercase;
-    letter-spacing:0.08em;
-    color:var(--rust);
-    display:block;
-    margin-bottom:0.3rem;
-  }
-  .dicas-cat ul{
-    margin:0; padding:0; list-style:none;
-    font-size:0.86rem;
-  }
-  .dicas-cat li{
-    padding:0.3rem 0;
-    border-bottom:1px dashed rgba(15,29,36,0.1);
-  }
-  .dicas-cat li:last-child{border-bottom:none;}
-  .dicas-cat li a{
-    color:var(--ink);
-    font-weight:600;
-    text-decoration:none;
-    border-bottom:1px solid var(--teal);
-  }
-  .dicas-cat li .obs{
-    color:rgba(15,29,36,0.62);
-  }
-
-  /* ---------- FOOTER PANEL: TIPS ---------- */
-  .panel{
-    max-width:920px; margin:0 auto 6rem; padding:0 1.25rem;
-  }
-  .panel h3{
-    font-family:'Fraunces',serif;
-    font-size:1.5rem;
-    color:var(--brass);
-    margin-bottom:1rem;
-  }
-  .tips{
-    display:grid; grid-template-columns:1fr; gap:0.9rem;
-  }
-  @media(min-width:640px){ .tips{grid-template-columns:1fr 1fr;} }
-  .tip{
-    background:var(--night-2);
-    border:1px solid var(--line);
-    border-radius:12px;
-    padding:1.1rem 1.2rem;
-    font-size:0.88rem;
-    color:rgba(239,231,214,0.82);
-  }
-  .tip .n{
-    font-family:'IBM Plex Mono',monospace;
-    color:var(--brass);
-    font-size:0.72rem;
-    display:block;
-    margin-bottom:0.4rem;
-  }
-
+  /* ---------- RESULTADO ---------- */
   .resumo-box{
-    background:var(--night-2);
-    border:1px solid var(--line);
-    border-radius:12px;
-    padding:1.1rem 1.3rem;
+    background:var(--night-2); border:1px solid var(--line);
+    border-radius:12px; padding:1.1rem 1.3rem; margin-bottom:0.8rem;
   }
+  .resumo-box:last-child{margin-bottom:0;}
   .resumo-line{
     display:flex; justify-content:space-between; gap:1rem;
-    padding:0.5rem 0;
-    border-bottom:1px dashed var(--line);
-    font-size:0.92rem;
-    color:rgba(239,231,214,0.85);
+    padding:0.5rem 0; border-bottom:1px dashed var(--line);
+    font-size:0.92rem; color:rgba(239,231,214,0.85);
   }
   .resumo-line:last-of-type{border-bottom:none;}
   .resumo-line.total{
-    font-weight:700; font-size:1.05rem;
-    color:var(--paper);
-    border-top:1px solid var(--line);
-    border-bottom:none;
+    font-weight:700; font-size:1.05rem; color:var(--paper);
+    border-top:1px solid var(--line); border-bottom:none;
     margin-top:0.2rem; padding-top:0.7rem;
   }
-  .resumo-note{
-    margin:0.7rem 0 0; font-size:0.78rem;
-    color:var(--brass);
-  }
+  .best{color:var(--brass);}
+  .stay-dates{opacity:0.6; font-size:0.8rem; margin-left:0.35rem;}
+  #print-head{display:none;}
+  #print-wrap{margin-top:1rem;}
 
-  .alt-form{
-    display:flex; flex-wrap:wrap; align-items:center; gap:0.7rem;
+  /* ---------- DICAS ---------- */
+  .tips{display:grid; grid-template-columns:1fr; gap:0.9rem;}
+  @media (min-width:680px){ .tips{grid-template-columns:1fr 1fr;} }
+  .tip{
+    background:var(--night-2); border:1px solid var(--line); border-radius:12px;
+    padding:1.1rem 1.2rem; font-size:0.88rem; color:rgba(239,231,214,0.82);
   }
-  .alt-form label{font-size:0.88rem; color:rgba(239,231,214,0.85);}
-  .alt-form input[type="date"]{
-    background:var(--paper); color:var(--ink);
-    border:1px solid rgba(15,29,36,0.15);
-    border-radius:8px; padding:0.5rem 0.7rem;
-    font-family:'Inter',sans-serif; font-size:0.88rem;
+  .tip .n{
+    font-family:'IBM Plex Mono',monospace; color:var(--brass);
+    font-size:0.72rem; display:block; margin-bottom:0.4rem;
   }
-  .alt-form button{
-    background:var(--brass); color:var(--ink);
-    border:none; border-radius:999px;
-    padding:0.55rem 1.2rem; font-weight:600; font-size:0.85rem;
-    cursor:pointer;
-  }
-  .alt-form button:disabled{opacity:0.6; cursor:wait;}
-  .alt-status{font-size:0.85rem; color:rgba(239,231,214,0.75); margin:0.7rem 0 0;}
-  #alt-result .resumo-box{margin-top:0.6rem;}
-
-  /* Mesmo form usado pela busca de Miami/Fort Lauderdale, com dois campos a
-     mais (noites, origem) que .alt-form sozinho não cobria. */
-  .alt-form input[type="number"], .alt-form select{
-    background:var(--paper); color:var(--ink);
-    border:1px solid rgba(15,29,36,0.15);
-    border-radius:8px; padding:0.5rem 0.7rem;
-    font-family:'Inter',sans-serif; font-size:0.88rem;
-  }
-  .alt-form input[type="number"]{width:5rem;}
-  #miami-result .resumo-box{margin-bottom:0.8rem;}
-  #miami-result .resumo-box:last-child{margin-bottom:0;}
-  .miami-best{color:var(--brass);}
 
   footer{
-    text-align:center;
-    padding:2.5rem 1.5rem 3.5rem;
-    color:rgba(239,231,214,0.45);
-    font-size:0.8rem;
-    font-family:'IBM Plex Mono',monospace;
-    border-top:1px solid var(--line);
+    text-align:center; padding:2.5rem 1.5rem 3.5rem;
+    color:rgba(239,231,214,0.45); font-size:0.8rem;
+    font-family:'IBM Plex Mono',monospace; border-top:1px solid var(--line);
   }
-
-  /* ---------- SHARED-FEATURE NOTICE ---------- */
-  .live-note{
-    max-width:920px; margin:0 auto 1.4rem; padding:0 1.25rem;
-  }
-  .live-note .box{
-    background:rgba(199,154,60,0.1);
-    border:1px solid rgba(199,154,60,0.35);
-    border-radius:10px;
-    padding:0.8rem 1rem;
-    font-size:0.82rem;
-    color:var(--brass);
-  }
-  .live-note .box.offline{
-    background:rgba(166,80,59,0.12);
-    border-color:rgba(166,80,59,0.4);
-    color:#E39B8A;
-  }
-
-  /* ---------- GALLERY ---------- */
-  .gallery-form{
-    display:grid;
-    grid-template-columns:1fr;
-    gap:0.6rem;
-    background:var(--night-2);
-    border:1px solid var(--line);
-    border-radius:12px;
-    padding:1.1rem;
-    margin-bottom:1.3rem;
-  }
-  @media(min-width:640px){
-    .gallery-form{grid-template-columns:1fr 1fr;}
-    .gallery-form .full{grid-column:1/-1;}
-  }
-  .gallery-form input, .gallery-form textarea{
-    width:100%;
-    background:var(--paper);
-    color:var(--ink);
-    border:1px solid rgba(15,29,36,0.15);
-    border-radius:8px;
-    padding:0.6rem 0.75rem;
-    font-family:'Inter',sans-serif;
-    font-size:0.88rem;
-  }
-  .gallery-form textarea{resize:vertical; min-height:44px;}
-  .gallery-form button{
-    grid-column:1/-1;
-    background:var(--brass); color:var(--ink);
-    border:none; border-radius:999px;
-    padding:0.65rem 1.2rem;
-    font-weight:600; font-size:0.88rem;
-    cursor:pointer;
-  }
-  .gallery-form button:disabled{opacity:0.6; cursor:wait;}
-  .gallery-hint{
-    font-size:0.78rem; color:rgba(239,231,214,0.55);
-    margin:-0.6rem 0 1.2rem;
-  }
-  .gallery-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fill, minmax(160px, 1fr));
-    gap:0.8rem;
-  }
-  .photo-card{
-    position:relative;
-    background:var(--paper); border-radius:10px; overflow:hidden;
-    box-shadow:var(--shadow);
-  }
-  .photo-del{
-    position:absolute; top:0.4rem; right:0.4rem; z-index:1;
-    width:24px; height:24px; border-radius:50%;
-    background:rgba(15,29,36,0.65); color:var(--paper);
-    border:none; cursor:pointer;
-    font-size:1rem; line-height:1; font-weight:600;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .photo-del:hover{background:var(--rust);}
-  .photo-del:disabled{opacity:0.5; cursor:wait;}
-  .photo-card img{
-    width:100%; height:140px; object-fit:cover; display:block;
-    background:var(--night-2);
-  }
-  .photo-card .meta{
-    padding:0.55rem 0.7rem 0.7rem;
-    color:var(--ink);
-  }
-  .photo-card .meta .who{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:0.68rem; color:var(--rust); text-transform:uppercase;
-  }
-  .photo-card .meta .cap{font-size:0.82rem; margin-top:0.15rem;}
-  .empty-state{
-    color:rgba(239,231,214,0.5);
-    font-size:0.88rem;
-    padding:1.5rem;
-    text-align:center;
-    border:1px dashed var(--line);
-    border-radius:10px;
-  }
-
-  /* ---------- CHAT ---------- */
-  .chat-box{
-    background:var(--night-2);
-    border:1px solid var(--line);
-    border-radius:12px;
-    padding:1rem;
-  }
-  .chat-messages{
-    display:flex; flex-direction:column; gap:0.55rem;
-    max-height:360px; overflow-y:auto;
-    padding-right:0.3rem;
-    margin-bottom:0.9rem;
-  }
-  .msg{
-    background:var(--paper); color:var(--ink);
-    border-radius:12px; border-top-left-radius:4px;
-    padding:0.5rem 0.75rem;
-    max-width:80%;
-    align-self:flex-start;
-    font-size:0.88rem;
-  }
-  .msg .who{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:0.68rem; color:var(--teal); text-transform:uppercase;
-    display:block; margin-bottom:0.1rem;
-  }
-  .msg .ts{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:0.65rem; color:rgba(15,29,36,0.4);
-    display:block; margin-top:0.25rem;
-  }
-  .chat-form{display:flex; flex-wrap:wrap; gap:0.5rem;}
-  .chat-form input[name="chat-name"]{flex:0 0 140px;}
-  .chat-form input[name="chat-text"]{flex:1 1 220px;}
-  .chat-form input{
-    background:var(--paper); color:var(--ink);
-    border:1px solid rgba(15,29,36,0.15);
-    border-radius:8px; padding:0.55rem 0.75rem;
-    font-family:'Inter',sans-serif; font-size:0.88rem;
-  }
-  .chat-form button{
-    background:var(--teal); color:var(--paper);
-    border:none; border-radius:999px;
-    padding:0.55rem 1.2rem; font-weight:600; font-size:0.85rem;
-    cursor:pointer;
-  }
-  .chat-form button:disabled{opacity:0.6; cursor:wait;}
 
   /* ---------- IMPRESSÃO / PDF ---------- */
   /* "Baixar PDF" só chama window.print() — o navegador já sabe salvar como
      PDF, então não há geração no servidor pra manter em dia com as cotações.
-     Esta seção some tudo que não é roteiro (formulários, chat, galeria,
-     botões) e troca o tema escuro por preto-no-branco, que imprime melhor. */
+     A folha é só a sugestão do roteiro aberto: some tudo que é interface
+     (lista, formulário, botões, dicas) e entra um cabeçalho próprio no lugar
+     do .hero, senão o PDF sairia sem dizer de que viagem se trata. */
   @media print{
-    body{background:#fff;}
-    .hero{background:none; color:#000; border-bottom:1px solid #000; padding:0 0 1rem;}
-    .hero::before{display:none;}
-    .hero .eyebrow, .hero p.sub, .hero-route{color:#333;}
-    .hero h1, .hero h1 em{color:#000;}
-    .quickbar, .intro, .live-note, #dicas, #galeria, #chat, footer{display:none !important;}
-    .actions a, .quote-bar{display:none !important;}
-    .map-wrap, details.mapd, .stop-marker{display:none !important;}
-    .timeline::before{display:none;}
-    .stop, .stop.right{width:100% !important; margin-left:0 !important;}
-    .leg{color:#333; text-align:left;}
-    .leg .arrow{color:#000;}
-    .leg a{display:none !important;}
-    .card{box-shadow:none; border:1px solid #999; break-inside:avoid;}
-    .quote-badge{background:none; border:1px solid #666;}
-    .quote-badge .val{color:#000;}
-    #resumo{break-inside:avoid;}
-    #resumo h3{color:#000;}
-    .resumo-box{background:none; border:1px solid #999;}
+    body{background:#fff; color:#000;}
+    .hero, .quickbar, #trips, #dicas, footer,
+    .trip-form, .city-plan, .actions, #detail-status, #print-wrap{display:none !important;}
+    #detail{display:block !important; max-width:none; margin:0; padding:0;}
+    #detail h3{display:none !important;}
+    #print-head{
+      display:block !important;
+      border-bottom:1px solid #000; padding-bottom:0.8rem; margin-bottom:1.2rem;
+    }
+    #print-head h2{font-family:'Fraunces',serif; font-size:1.6rem; color:#000; margin:0 0 0.35rem;}
+    #print-head .meta{font-size:0.9rem; color:#333; margin:0.15rem 0;}
+    #print-head .plan{font-size:0.9rem; color:#000; margin:0.5rem 0 0; font-weight:600;}
+    .resumo-box{background:none; border:1px solid #999; break-inside:avoid;}
     .resumo-line, .resumo-line.total{color:#000; border-color:#ccc;}
-    .resumo-note{color:#333;}
-    #alt-search{break-inside:avoid;}
-    #alt-search h3{color:#000;}
-    #alt-search .sub, .alt-status{color:#333;}
-    .alt-form{display:none !important;}
-    /* Miami/Fort Lauderdale é uma busca de destino à parte, não faz parte
-       do roteiro Ibérico — some do PDF principal por padrão. O botão "Baixar
-       PDF" de dentro do próprio painel Miami inverte isso via
-       body.print-miami: some o roteiro Ibérico e mostra só o resultado da
-       busca Miami, pra gerar um PDF separado sob demanda. */
-    #miami-search{display:none !important;}
-    #miami-search h3{color:#000;}
-    #miami-print-pdf{display:none !important;}
-    body.print-miami .hero, body.print-miami .timeline,
-    body.print-miami #resumo, body.print-miami #alt-search{display:none !important;}
-    body.print-miami #miami-search{display:block !important;}
-    #miami-result .resumo-box{break-inside:avoid;}
-    #miami-result .miami-best{color:#A6503B;}
+    .best{color:#A6503B;}
+    .stay-dates{color:#333; opacity:1;}
   }
 </style>
 </head>
 <body>
 
 <header class="hero">
-  <div class="eyebrow">Roteiro de carro · 14–31 out 2026 · 7 passageiros</div>
-  <h1>Saindo Lisboa <em>e retorno</em> Lisboa,<br>passando pela Ibéria toda</h1>
-  <p class="sub">Porto → A Coruña → Madrid → Granada → Málaga → Sevilha → Salamanca, e de volta. ~2.834&nbsp;km de estrada, carro retirado e devolvido em Lisboa.</p>
-  <div class="hero-route mono">
-    <span>LIS</span><span class="dot">•</span><span>OPO</span><span class="dot">•</span><span>A CORUÑA</span><span class="dot">•</span><span>MADRID</span><span class="dot">•</span><span>GRANADA</span><span class="dot">•</span><span>MÁLAGA</span><span class="dot">•</span><span>SEVILHA</span><span class="dot">•</span><span>SALAMANCA</span><span class="dot">•</span><span>LIS</span>
-  </div>
+  <div class="eyebrow">Planejador de roteiros</div>
+  <h1>Monte a viagem <em>e descubra</em><br>a semana mais barata</h1>
+  <p class="sub">Diga as cidades, quantas noites em cada uma e o período em que a viagem pode acontecer. O sistema testa várias janelas de data dentro desse período e cota, para cada uma, o voo de ida e volta mais um hotel por cidade — para você ver qual semana sai mais em conta.</p>
   <div class="quickbar">
-    <a class="btn btn-brass" href="https://drive.google.com/drive/folders/1VD2nYaItHTJG6dJl77rWdwvDErywCqzG?usp=drive_link" target="_blank" rel="noopener">📁 Repositório de fotos (Drive)</a>
-    <a class="btn btn-teal" href="#roteiro">🗺️ Ver roteiro dia a dia</a>
+    <button type="button" class="btn btn-brass" id="new-trip">+ Novo roteiro</button>
     <a class="btn btn-ghost" href="#dicas">⚠️ Dicas de carro/estrada</a>
-    <button type="button" class="btn btn-ghost" id="print-pdf">🖨️ Baixar PDF do roteiro</button>
-    <label class="price-toggle btn btn-ghost" for="toggle-prices">
-      <input type="checkbox" id="toggle-prices" checked> Exibir preços
-    </label>
   </div>
 </header>
 
-<p class="intro">Cada parada abaixo tem o hotel, o trecho de estrada até chegar lá, botões diretos para <strong>Waze</strong> e <strong>Google Maps</strong>, e um mapa da cidade. Fotos do grupo vão todas para a pasta compartilhada do Drive — qualquer um dos 7 pode subir fotos lá.</p>
-
-<div id="roteiro" class="timeline">
-
-  <!-- STOP 0 -->
-  <div class="stop">
-    <div class="stop-marker">✈</div>
-    <div class="card">
-      <div class="card-head">
-        <div class="dates">14–15 OUT</div>
-        <h2>Goiânia → Lisboa</h2>
-        <div class="nights">Chegada 07:10 (hora local) · voo LATAM JJ3373 + conexão em GRU</div>
-      </div>
-      <div class="card-body">
-        <div class="note">Retirada do carro sugerida no dia 17/10, ao sair de Lisboa — nos 2 primeiros dias, cidade a pé/Uber é mais prático que carro.</div>
-        <div class="actions" data-flight="gyn-lis">
-          <a class="btn-sm view" href="https://www.google.com/search?q=Aeroporto+Humberto+Delgado+Lisboa&tbm=isch" target="_blank" rel="noopener">Ver fotos do aeroporto</a>
-          <a class="btn-sm flights" href="https://www.google.com/travel/flights?q=Voos%20de%20Goi%C3%A2nia%20para%20Lisboa%20em%2014%20de%20outubro%20de%202026%20para%202%20passageiros" target="_blank" rel="noopener">✈️ Ver voos (Google Flights)</a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- STOP 1: LISBOA -->
-  <div class="stop right">
-    <div class="stop-marker">1</div>
-    <div class="card">
-      <div class="card-head">
-        <div class="dates">15–17 OUT · 2 noites</div>
-        <h2>Lisboa</h2>
-      </div>
-      <div class="card-body">
-        <div class="hotel">
-          <span class="label">Hotel</span>
-          Sana Rex Hotel
-        </div>
-        <div class="actions" data-quote="lisboa">
-          <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Sana+Rex+Hotel+Lisboa" target="_blank" rel="noopener">Google Maps</a>
-          <a class="btn-sm waze" href="https://waze.com/ul?q=Sana%20Rex%20Hotel%20Lisboa&navigate=yes" target="_blank" rel="noopener">Waze</a>
-          <a class="btn-sm photos" href="https://www.google.com/search?q=Lisboa+Alfama+Belem&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
-          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Sana+Rex+Hotel+Lisboa&checkin=2026-10-15&checkout=2026-10-17&group_adults=2&no_rooms=1&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
-          <a class="btn-sm decolar" href="https://www.google.com/search?q=decolar+hoteis+Sana+Rex+Hotel+Lisboa" target="_blank" rel="noopener">💰 Cotar Decolar</a>
-        </div>
-        <details class="mapd">
-          <summary>Ver mapa de Lisboa</summary>
-          <div class="map-wrap">
-            <iframe loading="lazy" src="https://maps.google.com/maps?q=Lisboa%2C%20Portugal&t=m&z=12&output=embed"></iframe>
-          </div>
-        </details>
-        <details class="mapd">
-          <summary>Onde comer e o que fazer em Lisboa</summary>
-          <div class="dicas-local">
-            <div class="dicas-cat">
-              <span class="dicas-label">🍽️ Restaurantes (perto do hotel, Marquês de Pombal/Av. Novas)</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=restaurantes+Marqu%C3%AAs+de+Pombal+Lisboa" target="_blank" rel="noopener">Zona do Marquês de Pombal / Gulbenkian</a> <span class="obs">— vários restaurantes portugueses a poucos minutos do hotel, confira notas no Google Maps na hora</span></li>
-              </ul>
-            </div>
-            <div class="dicas-cat">
-              <span class="dicas-label">🥐 Padarias e pastelarias</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Confeitaria+Nacional+Lisboa" target="_blank" rel="noopener">Confeitaria Nacional</a> <span class="obs">— desde 1829, clássica do centro</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Padaria+S%C3%A3o+Roque+Lisboa" target="_blank" rel="noopener">Padaria São Roque</a> <span class="obs">— "a catedral do pão", Bairro Alto/Príncipe Real</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Pastelaria+Batalha+Lisboa" target="_blank" rel="noopener">Pastelaria Batalha</a> <span class="obs">— pão premiado, perto do Rossio</span></li>
-              </ul>
-            </div>
-            <div class="dicas-cat">
-              <span class="dicas-label">🍷 Bares e passeios</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Bairro+Alto+Lisboa" target="_blank" rel="noopener">Bairro Alto</a> <span class="obs">— concentração de bares à noite</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Tasca+do+Chico+Lisboa" target="_blank" rel="noopener">Tasca do Chico</a> <span class="obs">— fado vadio ao vivo (Bairro Alto ou Alfama)</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Miradouro+de+Santa+Luzia+Lisboa" target="_blank" rel="noopener">Miradouro de Santa Luzia</a> <span class="obs">— vista de Alfama e do Tejo</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Mosteiro+dos+Jer%C3%B3nimos+Lisboa" target="_blank" rel="noopener">Belém</a> <span class="obs">— Mosteiro dos Jerónimos, Torre de Belém, e os Pastéis de Belém originais</span></li>
-              </ul>
-            </div>
-          </div>
-        </details>
-      </div>
-    </div>
-  </div>
-
-  <div class="leg">
-    <div class="leg-inner">
-      <span class="arrow">↓</span> Lisboa → Porto <span class="arrow">·</span> ~314 km <span class="arrow">·</span> ~2h40–3h <span class="arrow">·</span> A1
-      <a class="btn-sm gmaps" href="https://www.google.com/maps/dir/?api=1&origin=Lisboa,Portugal&destination=Porto,Portugal&travelmode=driving" target="_blank" rel="noopener">Rota</a>
-      <a class="btn-sm waze" href="https://waze.com/ul?q=Porto%2C%20Portugal&navigate=yes" target="_blank" rel="noopener">Waze</a>
-    </div>
-  </div>
-
-  <!-- STOP 2: PORTO -->
-  <div class="stop">
-    <div class="stop-marker">2</div>
-    <div class="card">
-      <div class="card-head">
-        <div class="dates">17–19 OUT · 2 noites</div>
-        <h2>Porto</h2>
-      </div>
-      <div class="card-body">
-        <div class="hotel">
-          <span class="label">Hotel</span>
-          Bessahotel Boavista
-        </div>
-        <div class="note">Retirada do carro aqui, se ainda não retirado em Lisboa. Centro histórico é ruim para trânsito — deixem o carro no hotel e explorem a pé/metrô.</div>
-        <div class="actions" data-quote="porto">
-          <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Bessahotel+Boavista+Porto" target="_blank" rel="noopener">Google Maps</a>
-          <a class="btn-sm waze" href="https://waze.com/ul?q=Bessahotel%20Boavista%20Porto&navigate=yes" target="_blank" rel="noopener">Waze</a>
-          <a class="btn-sm photos" href="https://www.google.com/search?q=Porto+Ribeira+Dom+Luis&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
-          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Bessahotel+Boavista+Porto&checkin=2026-10-17&checkout=2026-10-19&group_adults=2&no_rooms=1&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
-          <a class="btn-sm decolar" href="https://www.google.com/search?q=decolar+hoteis+Bessahotel+Boavista+Porto" target="_blank" rel="noopener">💰 Cotar Decolar</a>
-        </div>
-        <details class="mapd">
-          <summary>Ver mapa do Porto</summary>
-          <div class="map-wrap">
-            <iframe loading="lazy" src="https://maps.google.com/maps?q=Porto%2C%20Portugal&t=m&z=12&output=embed"></iframe>
-          </div>
-        </details>
-        <details class="mapd">
-          <summary>Onde comer e o que fazer no Porto</summary>
-          <div class="dicas-local">
-            <div class="dicas-cat">
-              <span class="dicas-label">🍽️ Restaurantes (perto do hotel, Boavista)</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Olive+Ristorante+Pizzeria+Porto" target="_blank" rel="noopener">Olive Ristorante & Pizzeria</a> <span class="obs">— bem recomendado pra almoço e jantar</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Restaurante+Medit+Porto" target="_blank" rel="noopener">Restaurante Medit</a> <span class="obs">— cozinha europeia, ~500m do hotel</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Vade+Retro+Porto" target="_blank" rel="noopener">Bar Restaurante Vade Retro</a> <span class="obs">— pratos portugueses</span></li>
-              </ul>
-            </div>
-            <div class="dicas-cat">
-              <span class="dicas-label">🥐 Padarias e pastelarias</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Padaria+Forno+da+Boavista+Porto" target="_blank" rel="noopener">Forno Boavista</a> <span class="obs">— padaria tradicional, Av. Boavista 863</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Manteigaria+Porto" target="_blank" rel="noopener">Manteigaria</a> <span class="obs">— pastel de nata na hora</span></li>
-              </ul>
-            </div>
-            <div class="dicas-cat">
-              <span class="dicas-label">🍷 Bares e passeios</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Miradouro+da+Vit%C3%B3ria+Porto" target="_blank" rel="noopener">Miradouro da Vitória</a> <span class="obs">— vista da cidade e do rio</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Livraria+Lello+Porto" target="_blank" rel="noopener">Livraria Lello e Torre dos Clérigos</a></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Cave+Sandeman+Porto" target="_blank" rel="noopener">Caves Sandeman</a> <span class="obs">— bar ao ar livre em Gaia, prove a Porto Tónica</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Galerias+de+Paris+Porto" target="_blank" rel="noopener">Galerias de Paris</a> <span class="obs">— vida noturna, bares e baladas</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Ribeira+do+Porto" target="_blank" rel="noopener">Ribeira e Ponte D. Luís I</a></li>
-              </ul>
-            </div>
-          </div>
-        </details>
-      </div>
-    </div>
-  </div>
-
-  <div class="leg">
-    <div class="leg-inner">
-      <span class="arrow">↓</span> Porto → A Coruña <span class="arrow">·</span> ~300 km <span class="arrow">·</span> ~3h <span class="arrow">·</span> cruza fronteira ES
-      <a class="btn-sm gmaps" href="https://www.google.com/maps/dir/?api=1&origin=Porto,Portugal&destination=A+Coruna,Spain&travelmode=driving" target="_blank" rel="noopener">Rota</a>
-      <a class="btn-sm waze" href="https://waze.com/ul?q=A%20Coru%C3%B1a%2C%20Espa%C3%B1a&navigate=yes" target="_blank" rel="noopener">Waze</a>
-    </div>
-  </div>
-
-  <!-- STOP 3: A CORUÑA -->
-  <div class="stop right">
-    <div class="stop-marker">3</div>
-    <div class="card">
-      <div class="card-head">
-        <div class="dates">19–20 OUT · 1 noite</div>
-        <h2>A Coruña</h2>
-      </div>
-      <div class="card-body">
-        <div class="hotel">
-          <span class="label">Hotel</span>
-          Hesperia A Coruña Centro
-        </div>
-        <div class="actions" data-quote="coruna">
-          <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Hesperia+A+Coruna+Centro" target="_blank" rel="noopener">Google Maps</a>
-          <a class="btn-sm waze" href="https://waze.com/ul?q=Hesperia%20A%20Coru%C3%B1a%20Centro&navigate=yes" target="_blank" rel="noopener">Waze</a>
-          <a class="btn-sm photos" href="https://www.google.com/search?q=A+Coru%C3%B1a+Torre+de+Hercules&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
-          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Hesperia+A+Coru%C3%B1a+Centro&checkin=2026-10-19&checkout=2026-10-20&group_adults=2&no_rooms=1&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
-          <a class="btn-sm decolar" href="https://www.google.com/search?q=decolar+hoteis+Hesperia+A+Coru%C3%B1a+Centro" target="_blank" rel="noopener">💰 Cotar Decolar</a>
-        </div>
-        <details class="mapd">
-          <summary>Ver mapa de A Coruña</summary>
-          <div class="map-wrap">
-            <iframe loading="lazy" src="https://maps.google.com/maps?q=A%20Coru%C3%B1a%2C%20Espa%C3%B1a&t=m&z=12&output=embed"></iframe>
-          </div>
-        </details>
-        <details class="mapd">
-          <summary>Onde comer e o que fazer em A Coruña</summary>
-          <div class="dicas-local">
-            <div class="dicas-cat">
-              <span class="dicas-label">🍽️ Restaurantes (perto do hotel, Centro)</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Terreo+Cocina+Casual+A+Coru%C3%B1a" target="_blank" rel="noopener">Terreo Cocina Casual</a> <span class="obs">— 4.8★, ~0.5km</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Artabria+Restaurante+A+Coru%C3%B1a" target="_blank" rel="noopener">Artabria</a> <span class="obs">— 4.5★, bem pertinho</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Meson+Os+Trasnos+A+Coru%C3%B1a" target="_blank" rel="noopener">Mesón Os Trasnos</a> <span class="obs">— 4.5★</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Gloria+Bendita+A+Coru%C3%B1a" target="_blank" rel="noopener">Gloria Bendita</a> <span class="obs">— 4.4★</span></li>
-              </ul>
-            </div>
-            <div class="dicas-cat">
-              <span class="dicas-label">🥐 Padarias e pastelarias</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Amaranto+A+Coru%C3%B1a" target="_blank" rel="noopener">Amaranto</a> <span class="obs">— padaria/café 100% sem glúten</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Panaderia+Cuns+A+Coru%C3%B1a" target="_blank" rel="noopener">Panadería Cuns</a></li>
-              </ul>
-            </div>
-            <div class="dicas-cat">
-              <span class="dicas-label">🍷 Bares e passeios</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Torre+de+Hercules+A+Coru%C3%B1a" target="_blank" rel="noopener">Torre de Hércules</a> <span class="obs">— farol romano, símbolo da cidade</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Plaza+de+Maria+Pita+A+Coru%C3%B1a" target="_blank" rel="noopener">Plaza de María Pita</a></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=La+Bombilla+A+Coru%C3%B1a" target="_blank" rel="noopener">La Bombilla</a> <span class="obs">— clássico de tapas há 80+ anos</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Bar+Pontejos+A+Coru%C3%B1a" target="_blank" rel="noopener">Bar Pontejos</a> <span class="obs">— tortilla de patata feita na hora desde as 7h</span></li>
-              </ul>
-            </div>
-          </div>
-        </details>
-      </div>
-    </div>
-  </div>
-
-  <div class="leg">
-    <div class="leg-inner">
-      <span class="arrow">↓</span> A Coruña → Madrid <span class="arrow">·</span> ~590 km <span class="arrow">·</span> ~5h30–6h <span class="arrow">·</span> trecho mais longo
-      <a class="btn-sm gmaps" href="https://www.google.com/maps/dir/?api=1&origin=A+Coruna,Spain&destination=Madrid,Spain&travelmode=driving" target="_blank" rel="noopener">Rota</a>
-      <a class="btn-sm waze" href="https://waze.com/ul?q=Madrid%2C%20Espa%C3%B1a&navigate=yes" target="_blank" rel="noopener">Waze</a>
-    </div>
-  </div>
-
-  <!-- STOP 4: MADRID -->
-  <div class="stop">
-    <div class="stop-marker">4</div>
-    <div class="card">
-      <div class="card-head">
-        <div class="dates">20–22 OUT · 2 noites</div>
-        <h2>Madrid</h2>
-      </div>
-      <div class="card-body">
-        <div class="hotel">
-          <span class="label">Hotel</span>
-          Hotel Madrid Centro Affiliated by Meliá
-        </div>
-        <div class="note">Hotel fica na Zona de Bajas Emisiones (Distrito Centro) — perguntem na recepção sobre autorização de acesso de carro antes de entrar na região.</div>
-        <div class="actions" data-quote="madrid">
-          <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Hotel+Madrid+Centro+Affiliated+by+Melia" target="_blank" rel="noopener">Google Maps</a>
-          <a class="btn-sm waze" href="https://waze.com/ul?q=Hotel%20Madrid%20Centro%20Melia&navigate=yes" target="_blank" rel="noopener">Waze</a>
-          <a class="btn-sm photos" href="https://www.google.com/search?q=Madrid+Gran+Via+Palacio&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
-          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Hotel+Madrid+Centro+Affiliated+by+Melia&checkin=2026-10-20&checkout=2026-10-22&group_adults=2&no_rooms=1&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
-          <a class="btn-sm decolar" href="https://www.google.com/search?q=decolar+hoteis+Hotel+Madrid+Centro+Affiliated+by+Melia" target="_blank" rel="noopener">💰 Cotar Decolar</a>
-        </div>
-        <details class="mapd">
-          <summary>Ver mapa de Madrid</summary>
-          <div class="map-wrap">
-            <iframe loading="lazy" src="https://maps.google.com/maps?q=Madrid%2C%20Espa%C3%B1a&t=m&z=12&output=embed"></iframe>
-          </div>
-        </details>
-        <details class="mapd">
-          <summary>Onde comer e o que fazer em Madrid</summary>
-          <div class="dicas-local">
-            <div class="dicas-cat">
-              <span class="dicas-label">🍽️ Restaurantes (perto do hotel, Gran Vía)</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Diurno+Madrid" target="_blank" rel="noopener">Diurno</a> <span class="obs">— 9.3, econômico</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Mercado+de+la+Reina+12+Madrid" target="_blank" rel="noopener">Mercado de la Reina</a> <span class="obs">— 9.1, na própria Gran Vía</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Vinitus+Madrid" target="_blank" rel="noopener">Vinitus</a> <span class="obs">— ~25€/pessoa</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Mercado+de+San+Miguel+Madrid" target="_blank" rel="noopener">Mercado de San Miguel</a> <span class="obs">— +20 bancas de comida, perto da Plaza Mayor</span></li>
-              </ul>
-            </div>
-            <div class="dicas-cat">
-              <span class="dicas-label">🥐 Padarias e pastelarias</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=La+Primera+Madrid+desayunos" target="_blank" rel="noopener">La Primera</a> <span class="obs">— café da manhã completo a partir de 5,20€</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=panaderia+Gran+Via+Madrid" target="_blank" rel="noopener">Padarias perto da Gran Vía</a> <span class="obs">— confira notas no Google Maps na hora</span></li>
-              </ul>
-            </div>
-            <div class="dicas-cat">
-              <span class="dicas-label">🍷 Bares e passeios</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=La+Latina+Madrid" target="_blank" rel="noopener">La Latina (Cava Alta/Cava Baja)</a> <span class="obs">— bairro mais tradicional de tapas</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=El+Tigre+Madrid" target="_blank" rel="noopener">El Tigre</a> <span class="obs">— tapas enormes de graça com a bebida</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Bodega+La+Ardosa+Madrid" target="_blank" rel="noopener">Bodega La Ardosa</a></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Palacio+Real+de+Madrid" target="_blank" rel="noopener">Palacio Real</a></li>
-              </ul>
-            </div>
-          </div>
-        </details>
-      </div>
-    </div>
-  </div>
-
-  <div class="leg">
-    <div class="leg-inner">
-      <span class="arrow">↓</span> Madrid → Granada <span class="arrow">·</span> ~420 km <span class="arrow">·</span> ~4h15
-      <a class="btn-sm gmaps" href="https://www.google.com/maps/dir/?api=1&origin=Madrid,Spain&destination=Granada,Spain&travelmode=driving" target="_blank" rel="noopener">Rota</a>
-      <a class="btn-sm waze" href="https://waze.com/ul?q=Granada%2C%20Espa%C3%B1a&navigate=yes" target="_blank" rel="noopener">Waze</a>
-    </div>
-  </div>
-
-  <!-- STOP 5: GRANADA -->
-  <div class="stop right">
-    <div class="stop-marker">5</div>
-    <div class="card">
-      <div class="card-head">
-        <div class="dates">22–24 OUT · 2 noites</div>
-        <h2>Granada</h2>
-      </div>
-      <div class="card-body">
-        <div class="hotel">
-          <span class="label">Hotel</span>
-          Porcel Alixares
-        </div>
-        <div class="actions" data-quote="granada">
-          <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Porcel+Alixares+Granada" target="_blank" rel="noopener">Google Maps</a>
-          <a class="btn-sm waze" href="https://waze.com/ul?q=Porcel%20Alixares%20Granada&navigate=yes" target="_blank" rel="noopener">Waze</a>
-          <a class="btn-sm photos" href="https://www.google.com/search?q=Granada+Alhambra&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
-          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Porcel+Alixares+Granada&checkin=2026-10-22&checkout=2026-10-24&group_adults=2&no_rooms=1&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
-          <a class="btn-sm decolar" href="https://www.google.com/search?q=decolar+hoteis+Porcel+Alixares+Granada" target="_blank" rel="noopener">💰 Cotar Decolar</a>
-        </div>
-        <details class="mapd">
-          <summary>Ver mapa de Granada</summary>
-          <div class="map-wrap">
-            <iframe loading="lazy" src="https://maps.google.com/maps?q=Granada%2C%20Espa%C3%B1a&t=m&z=12&output=embed"></iframe>
-          </div>
-        </details>
-        <details class="mapd">
-          <summary>Onde comer e o que fazer em Granada</summary>
-          <div class="dicas-local">
-            <div class="dicas-cat">
-              <span class="dicas-label">🍽️ Restaurantes (perto do hotel, Porcel Alixares)</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Pizzeria+de+l%27Angus+Granada" target="_blank" rel="noopener">Pizzería de l'Angus</a> <span class="obs">— ~100m do hotel</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Restaurante+La+Mimbre+Granada" target="_blank" rel="noopener">Restaurante La Mimbre</a></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Calle+Elvira+Granada" target="_blank" rel="noopener">Calle Elvira</a> <span class="obs">— ~20min a pé, cheia de bares/tapas andaluzas</span></li>
-              </ul>
-            </div>
-            <div class="dicas-cat">
-              <span class="dicas-label">🥐 Padarias e pastelarias</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Casa+Pasteles+Albayzin+Granada" target="_blank" rel="noopener">Casa Pasteles Albayzín</a> <span class="obs">— 4.2★, no Albaicín</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=La+Patisserie+de+Paris+Granada" target="_blank" rel="noopener">La Pâtisserie de Paris</a> <span class="obs">— 4.8★</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Cafe+Pasteleria+Lopez-Mezquita+Granada" target="_blank" rel="noopener">Café Pastelería López-Mezquita</a> <span class="obs">— histórica, prove o pionono</span></li>
-              </ul>
-            </div>
-            <div class="dicas-cat">
-              <span class="dicas-label">🍷 Bares e passeios</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Alhambra+Granada" target="_blank" rel="noopener">Alhambra</a> <span class="obs">— reserve ingresso com antecedência</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Mirador+de+San+Nicolas+Granada" target="_blank" rel="noopener">Mirador de San Nicolás</a> <span class="obs">— vista da Alhambra, vá 1h antes do pôr do sol</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Bar+Kiki+Granada" target="_blank" rel="noopener">Kiki</a> <span class="obs">— tapas com terraço panorâmico perto do mirador</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Calle+Navas+Granada" target="_blank" rel="noopener">Calle Navas</a> <span class="obs">— clássico local de cerveja + tapas</span></li>
-              </ul>
-            </div>
-          </div>
-        </details>
-      </div>
-    </div>
-  </div>
-
-  <div class="leg">
-    <div class="leg-inner">
-      <span class="arrow">↓</span> Granada → Torremolinos <span class="arrow">·</span> ~130 km <span class="arrow">·</span> ~1h30–2h
-      <a class="btn-sm gmaps" href="https://www.google.com/maps/dir/?api=1&origin=Granada,Spain&destination=Torremolinos,Spain&travelmode=driving" target="_blank" rel="noopener">Rota</a>
-      <a class="btn-sm waze" href="https://waze.com/ul?q=Torremolinos%2C%20Espa%C3%B1a&navigate=yes" target="_blank" rel="noopener">Waze</a>
-    </div>
-  </div>
-
-  <!-- STOP 6: TORREMOLINOS -->
-  <div class="stop">
-    <div class="stop-marker">6</div>
-    <div class="card">
-      <div class="card-head">
-        <div class="dates">24–27 OUT · 3 noites</div>
-        <h2>Torremolinos (Málaga)</h2>
-      </div>
-      <div class="card-body">
-        <div class="hotel">
-          <span class="label">Hotel</span>
-          Hotel Los Jazmines
-        </div>
-        <div class="actions" data-quote="torremolinos">
-          <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Hotel+Los+Jazmines+Torremolinos" target="_blank" rel="noopener">Google Maps</a>
-          <a class="btn-sm waze" href="https://waze.com/ul?q=Hotel%20Los%20Jazmines%20Torremolinos&navigate=yes" target="_blank" rel="noopener">Waze</a>
-          <a class="btn-sm photos" href="https://www.google.com/search?q=Torremolinos+Malaga+praia&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
-          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Hotel+Los+Jazmines+Torremolinos&checkin=2026-10-24&checkout=2026-10-27&group_adults=2&no_rooms=1&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
-          <a class="btn-sm decolar" href="https://www.google.com/search?q=decolar+hoteis+Hotel+Los+Jazmines+Torremolinos" target="_blank" rel="noopener">💰 Cotar Decolar</a>
-        </div>
-        <details class="mapd">
-          <summary>Ver mapa de Torremolinos</summary>
-          <div class="map-wrap">
-            <iframe loading="lazy" src="https://maps.google.com/maps?q=Torremolinos%2C%20Espa%C3%B1a&t=m&z=12&output=embed"></iframe>
-          </div>
-        </details>
-        <details class="mapd">
-          <summary>Onde comer e o que fazer em Torremolinos</summary>
-          <div class="dicas-local">
-            <div class="dicas-cat">
-              <span class="dicas-label">🍽️ Restaurantes (perto do hotel, Los Jazmines)</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Arrozante+Torremolinos" target="_blank" rel="noopener">Arrozante</a> <span class="obs">— 9.8, muito bem avaliado</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Alby%27s+Torremolinos" target="_blank" rel="noopener">Alby's</a> <span class="obs">— 9.3</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Angus+Playamar+Torremolinos" target="_blank" rel="noopener">ANGUS Playamar</a> <span class="obs">— 9.2, com terraço</span></li>
-              </ul>
-            </div>
-            <div class="dicas-cat">
-              <span class="dicas-label">🥐 Padarias e pastelarias</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=panaderia+Torremolinos+centro" target="_blank" rel="noopener">Padarias no centro/La Carihuela</a> <span class="obs">— confira notas no Google Maps na hora</span></li>
-              </ul>
-            </div>
-            <div class="dicas-cat">
-              <span class="dicas-label">🍷 Bares, praia e passeios</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=La+Carihuela+Torremolinos" target="_blank" rel="noopener">La Carihuela</a> <span class="obs">— melhor praia urbana de Málaga, chiringuitos de peixe frito</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Playa+del+Bajondillo+Torremolinos" target="_blank" rel="noopener">Playa del Bajondillo</a> <span class="obs">— perto do centro</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Calle+San+Miguel+Torremolinos" target="_blank" rel="noopener">Calle San Miguel</a> <span class="obs">— lojas, bares e restaurantes</span></li>
-                <li><span class="obs">Prove os espetos de sardinhas e o gazpacho nos chiringuitos de praia</span></li>
-              </ul>
-            </div>
-          </div>
-        </details>
-      </div>
-    </div>
-  </div>
-
-  <div class="leg">
-    <div class="leg-inner">
-      <span class="arrow">↓</span> Torremolinos → Sevilha <span class="arrow">·</span> ~210 km <span class="arrow">·</span> ~2h
-      <a class="btn-sm gmaps" href="https://www.google.com/maps/dir/?api=1&origin=Torremolinos,Spain&destination=Sevilla,Spain&travelmode=driving" target="_blank" rel="noopener">Rota</a>
-      <a class="btn-sm waze" href="https://waze.com/ul?q=Sevilla%2C%20Espa%C3%B1a&navigate=yes" target="_blank" rel="noopener">Waze</a>
-    </div>
-  </div>
-
-  <!-- STOP 7: SEVILHA -->
-  <div class="stop right">
-    <div class="stop-marker">7</div>
-    <div class="card">
-      <div class="card-head">
-        <div class="dates">27–29 OUT · 2 noites</div>
-        <h2>Sevilha</h2>
-      </div>
-      <div class="card-body">
-        <div class="hotel">
-          <span class="label">Hotel</span>
-          Duquesa Sevilla
-        </div>
-        <div class="actions" data-quote="sevilha">
-          <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Duquesa+Sevilla+Hotel" target="_blank" rel="noopener">Google Maps</a>
-          <a class="btn-sm waze" href="https://waze.com/ul?q=Duquesa%20Sevilla%20Hotel&navigate=yes" target="_blank" rel="noopener">Waze</a>
-          <a class="btn-sm photos" href="https://www.google.com/search?q=Sevilha+Plaza+de+Espana&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
-          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Duquesa+Sevilla+Hotel&checkin=2026-10-27&checkout=2026-10-29&group_adults=2&no_rooms=1&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
-          <a class="btn-sm decolar" href="https://www.google.com/search?q=decolar+hoteis+Duquesa+Sevilla+Hotel" target="_blank" rel="noopener">💰 Cotar Decolar</a>
-        </div>
-        <details class="mapd">
-          <summary>Ver mapa de Sevilha</summary>
-          <div class="map-wrap">
-            <iframe loading="lazy" src="https://maps.google.com/maps?q=Sevilla%2C%20Espa%C3%B1a&t=m&z=12&output=embed"></iframe>
-          </div>
-        </details>
-        <details class="mapd">
-          <summary>Onde comer e o que fazer em Sevilha</summary>
-          <div class="dicas-local">
-            <div class="dicas-cat">
-              <span class="dicas-label">🍽️ Restaurantes (centro histórico)</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Bodeguita+Antonio+Romero+Sevilla" target="_blank" rel="noopener">Bodeguita Antonio Romero</a> <span class="obs">— bairro do Arenal, ~10€/pessoa</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Bar+Sal+Gorda+Sevilla" target="_blank" rel="noopener">Bar Sal Gorda</a></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=El+Pasaje+Tapas+Sevilla" target="_blank" rel="noopener">El Pasaje Tapas</a></li>
-              </ul>
-            </div>
-            <div class="dicas-cat">
-              <span class="dicas-label">🥐 Padarias e pastelarias</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=panaderia+centro+Sevilla" target="_blank" rel="noopener">Padarias no centro histórico</a> <span class="obs">— confira notas no Google Maps na hora</span></li>
-              </ul>
-            </div>
-            <div class="dicas-cat">
-              <span class="dicas-label">🍷 Bares e passeios</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Real+Alcazar+de+Sevilla" target="_blank" rel="noopener">Real Alcázar</a></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Plaza+de+Espana+Sevilla" target="_blank" rel="noopener">Plaza de España</a></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Triana+Sevilla" target="_blank" rel="noopener">Triana</a> <span class="obs">— maior concentração de bares de tapas da cidade</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Bodega+Santa+Cruz+Las+Columnas+Sevilla" target="_blank" rel="noopener">Bodega Santa Cruz "Las Columnas"</a> <span class="obs">— clássica, perto da catedral</span></li>
-              </ul>
-            </div>
-          </div>
-        </details>
-      </div>
-    </div>
-  </div>
-
-  <div class="leg">
-    <div class="leg-inner">
-      <span class="arrow">↓</span> Sevilha → Salamanca <span class="arrow">·</span> ~400 km <span class="arrow">·</span> ~4h30 <span class="arrow">·</span> Ruta de la Plata (A-66)
-      <a class="btn-sm gmaps" href="https://www.google.com/maps/dir/?api=1&origin=Sevilla,Spain&destination=Salamanca,Spain&travelmode=driving" target="_blank" rel="noopener">Rota</a>
-      <a class="btn-sm waze" href="https://waze.com/ul?q=Salamanca%2C%20Espa%C3%B1a&navigate=yes" target="_blank" rel="noopener">Waze</a>
-    </div>
-  </div>
-
-  <!-- STOP 8: SALAMANCA -->
-  <div class="stop">
-    <div class="stop-marker">8</div>
-    <div class="card">
-      <div class="card-head">
-        <div class="dates">29–31 OUT · 2 noites</div>
-        <h2>Salamanca</h2>
-      </div>
-      <div class="card-body">
-        <div class="hotel">
-          <span class="label">Hotel</span>
-          San Polo
-        </div>
-        <div class="actions" data-quote="salamanca">
-          <a class="btn-sm gmaps" href="https://www.google.com/maps/search/?api=1&query=Hotel+San+Polo+Salamanca" target="_blank" rel="noopener">Google Maps</a>
-          <a class="btn-sm waze" href="https://waze.com/ul?q=Hotel%20San%20Polo%20Salamanca&navigate=yes" target="_blank" rel="noopener">Waze</a>
-          <a class="btn-sm photos" href="https://www.google.com/search?q=Salamanca+Plaza+Mayor&tbm=isch" target="_blank" rel="noopener">Fotos da cidade</a>
-          <a class="btn-sm booking" href="https://www.booking.com/searchresults.html?ss=Hotel+San+Polo+Salamanca&checkin=2026-10-29&checkout=2026-10-31&group_adults=2&no_rooms=1&group_children=0&selected_currency=BRL" target="_blank" rel="noopener">💰 Cotar Booking</a>
-          <a class="btn-sm decolar" href="https://www.google.com/search?q=decolar+hoteis+Hotel+San+Polo+Salamanca" target="_blank" rel="noopener">💰 Cotar Decolar</a>
-        </div>
-        <details class="mapd">
-          <summary>Ver mapa de Salamanca</summary>
-          <div class="map-wrap">
-            <iframe loading="lazy" src="https://maps.google.com/maps?q=Salamanca%2C%20Espa%C3%B1a&t=m&z=12&output=embed"></iframe>
-          </div>
-        </details>
-        <details class="mapd">
-          <summary>Onde comer e o que fazer em Salamanca</summary>
-          <div class="dicas-local">
-            <div class="dicas-cat">
-              <span class="dicas-label">🍽️ Restaurantes</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Restaurante+Hotel+San+Polo+Salamanca" target="_blank" rel="noopener">Restaurante do próprio Hotel San Polo</a> <span class="obs">— 4.1★, ~2000 avaliações, ótimo custo-benefício</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=El+Patio+Chico+Salamanca" target="_blank" rel="noopener">El Patio Chico</a> <span class="obs">— perto da Plaza Mayor, tapa grátis com cada caña</span></li>
-              </ul>
-            </div>
-            <div class="dicas-cat">
-              <span class="dicas-label">🥐 Padarias e pastelarias</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=panaderia+Plaza+Mayor+Salamanca" target="_blank" rel="noopener">Padarias perto da Plaza Mayor</a> <span class="obs">— confira notas no Google Maps na hora</span></li>
-              </ul>
-            </div>
-            <div class="dicas-cat">
-              <span class="dicas-label">🍷 Bares e passeios</span>
-              <ul>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Plaza+Mayor+Salamanca" target="_blank" rel="noopener">Plaza Mayor</a></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Winelovers+Salamanca" target="_blank" rel="noopener">Winelovers</a> <span class="obs">— +200 vinhos e tapas feitas na hora</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Meson+Cervantes+Salamanca" target="_blank" rel="noopener">Mesón Cervantes</a> <span class="obs">— tapas tradicionais na Plaza Mayor</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Casa+Lis+Salamanca" target="_blank" rel="noopener">Casa Lis</a> <span class="obs">— museu Art Nouveau/Art Déco</span></li>
-                <li><a href="https://www.google.com/maps/search/?api=1&query=Puente+Romano+Salamanca" target="_blank" rel="noopener">Puente Romano</a> <span class="obs">— melhor vista panorâmica da cidade</span></li>
-              </ul>
-            </div>
-          </div>
-        </details>
-      </div>
-    </div>
-  </div>
-
-  <div class="leg">
-    <div class="leg-inner">
-      <span class="arrow">↓</span> Salamanca → Aeroporto de Lisboa <span class="arrow">·</span> ~470 km <span class="arrow">·</span> ~4h30 <span class="arrow">·</span> saída 05:30–06:00
-      <a class="btn-sm gmaps" href="https://www.google.com/maps/dir/?api=1&origin=Salamanca,Spain&destination=Aeroporto+Humberto+Delgado,Lisboa&travelmode=driving" target="_blank" rel="noopener">Rota</a>
-      <a class="btn-sm waze" href="https://waze.com/ul?q=Aeroporto%20Humberto%20Delgado%20Lisboa&navigate=yes" target="_blank" rel="noopener">Waze</a>
-    </div>
-  </div>
-
-  <!-- STOP 9: VOLTA -->
-  <div class="stop right">
-    <div class="stop-marker">✈</div>
-    <div class="card">
-      <div class="card-head">
-        <div class="dates">31 OUT</div>
-        <h2>Lisboa → Goiânia</h2>
-        <div class="nights">Devolução do carro no aeroporto · voo LATAM JJ8149, 13:50 → GRU 21:05 · conexão GYN 01:10 (madrugada 01/11)</div>
-      </div>
-      <div class="card-body">
-        <div class="note">Chegar ao aeroporto com 2h30–3h de antecedência. Devolvam o carro com tanque cheio e fotografem o veículo antes de entregar.</div>
-        <div class="actions" data-flight="gyn-lis">
-          <a class="btn-sm flights" href="https://www.google.com/travel/flights?q=Voos%20de%20Lisboa%20para%20Goi%C3%A2nia%20em%2031%20de%20outubro%20de%202026%20para%202%20passageiros" target="_blank" rel="noopener">✈️ Ver voos (Google Flights)</a>
-        </div>
-      </div>
-    </div>
-  </div>
-
+<div class="panel" id="trips">
+  <h3>Meus roteiros</h3>
+  <div id="trip-list"></div>
+  <p id="trips-status" class="status"></p>
 </div>
 
-<div class="panel" id="resumo" hidden>
-  <h3>💵 Resumo de custos</h3>
-  <div class="resumo-box" id="resumo-box"></div>
-</div>
+<div class="panel" id="detail" hidden>
+  <h3 id="detail-title">Novo roteiro</h3>
 
-<div class="panel" id="alt-search" hidden>
-  <h3>📅 Cotar outra data (roteiro inteiro)</h3>
-  <p class="sub" style="color:rgba(239,231,214,0.65); font-size:0.9rem; margin-top:-0.6rem; margin-bottom:1.1rem;">
-    Desloca as mesmas ~17 noites pra outra janela de datas e cota tudo de novo (8 hospedagens + voo) pra comparar com a data atual. Cota compartilhada com as cotações acima — usa bastante crédito de uma vez, então é limitado a 1 busca a cada 6h.
-  </p>
-  <div class="alt-form">
-    <label for="alt-start">Nova data de início (voo de ida)</label>
-    <input type="date" id="alt-start">
-    <button type="button" id="alt-refresh">Cotar essa opção</button>
-  </div>
-  <p id="alt-status" class="alt-status"></p>
-  <div id="alt-result"></div>
-</div>
+  <div class="trip-form">
+    <div class="form-row">
+      <label for="f-name">Nome</label>
+      <input type="text" id="f-name" class="nome" maxlength="60" placeholder="Ex.: Miami em maio/2027">
+    </div>
+    <div class="form-row">
+      <label for="f-origin">Saindo de</label>
+      <input type="text" id="f-origin" class="iata" maxlength="3" placeholder="GYN">
+      <label for="f-dest">Chegando em</label>
+      <input type="text" id="f-dest" class="iata" maxlength="3" placeholder="MIA">
+      <label for="f-adults">Passageiros</label>
+      <input type="number" id="f-adults" min="1" max="9" value="2">
+    </div>
+    <div class="form-row">
+      <label for="f-start">A viagem pode começar entre</label>
+      <input type="date" id="f-start">
+      <label for="f-end">e</label>
+      <input type="date" id="f-end">
+    </div>
 
-<div class="panel" id="miami-search" hidden>
-  <h3>🏖️ Outro destino — datas flexíveis</h3>
-  <p class="sub" style="color:rgba(239,231,214,0.65); font-size:0.9rem; margin-top:-0.6rem; margin-bottom:1.1rem;">
-    Informe o destino e testa até 8 janelas de datas dentro do período dado, cotando voo (ida e volta) e o hotel mais barato até 4 estrelas com café da manhã e estacionamento incluídos, em até 2 cidades — pra achar os dias (e a cidade) mais baratos pra viajar. Cota compartilhada com as cotações acima e com "outra data" — usa bastante crédito de uma vez, então é limitado a 1 busca a cada 12h.
-  </p>
-  <div class="alt-form">
-    <label for="miami-start">Início da janela</label>
-    <input type="date" id="miami-start" value="2027-05-01">
-    <label for="miami-end">Término da janela</label>
-    <input type="date" id="miami-end" value="2027-05-31">
-    <label for="miami-dest">Aeroporto de destino</label>
-    <input type="text" id="miami-dest" value="MIA" maxlength="3" placeholder="MIA" style="width:4.5rem; text-transform:uppercase;">
-    <label for="miami-cities">Cidade(s) p/ hotel</label>
-    <input type="text" id="miami-cities" value="Downtown Miami, Fort Lauderdale" placeholder="Ex.: Downtown Miami, Fort Lauderdale" style="min-width:16rem;">
-    <label for="miami-nights">Noites</label>
-    <input type="number" id="miami-nights" min="2" max="21" value="7">
-    <label for="miami-origin">Saindo de</label>
-    <select id="miami-origin">
-      <option value="GYN">Goiânia (GYN)</option>
-      <option value="BSB">Brasília (BSB)</option>
-    </select>
-    <button type="button" id="miami-refresh">Buscar melhores datas</button>
+    <div class="city-plan">
+      <div class="city-plan-head">
+        <span>Cidades e noites em cada uma</span>
+        <span id="total-nights" class="city-plan-total"></span>
+      </div>
+      <div id="city-list"></div>
+      <button type="button" class="btn btn-ghost btn-sm" id="add-city">+ Adicionar cidade</button>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn btn-brass" id="save-trip">Salvar roteiro</button>
+      <button type="button" class="btn btn-teal" id="run-search" hidden>💰 Cotar voo e hotéis</button>
+      <button type="button" class="btn btn-ghost" id="back-to-list">Voltar</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn btn-danger" id="delete-trip" hidden>Apagar</button>
+    </div>
   </div>
-  <p id="miami-status" class="alt-status"></p>
-  <button type="button" class="btn btn-ghost btn-sm" id="miami-print-pdf" style="margin-bottom:0.8rem;">🖨️ Baixar PDF desta busca</button>
-  <div id="miami-result"></div>
+
+  <p id="detail-status" class="status"></p>
+  <div id="print-head"></div>
+  <div id="result"></div>
+  <div id="print-wrap" hidden>
+    <button type="button" class="btn btn-brass" id="print-pdf">🖨️ Baixar PDF / imprimir esta sugestão</button>
+  </div>
 </div>
 
 <div id="dicas" class="panel">
   <h3>Dicas rápidas para quem vai dirigir</h3>
   <div class="tips">
-    <div class="tip"><span class="n">01 · LOCADORA</span>Confirmem por escrito que o contrato permite sair de Portugal para a Espanha — algumas locadoras cobram taxa extra ou exigem aviso prévio.</div>
-    <div class="tip"><span class="n">02 · PORTAGENS</span>Em Portugal, parte da A1 é portagem 100% eletrônica. Confirmem que o carro já vem com Via Verde ativado na retirada.</div>
-    <div class="tip"><span class="n">03 · MADRID ZBE</span>O hotel em Madrid fica na Zona de Bajas Emisiones — avisem a recepção com antecedência sobre o carro.</div>
-    <div class="tip"><span class="n">04 · REVEZAMENTO</span>O trecho A Coruña → Madrid (~5h30-6h) é o mais longo — revezem entre os motoristas habilitados do grupo.</div>
+    <div class="tip"><span class="n">01 · LOCADORA</span>Se o roteiro cruza fronteira, confirmem por escrito que o contrato permite — algumas locadoras cobram taxa extra ou exigem aviso prévio.</div>
+    <div class="tip"><span class="n">02 · PEDÁGIOS</span>Em vários países o pedágio é 100% eletrônico. Confirmem na retirada que o carro já vem com o dispositivo ativado.</div>
+    <div class="tip"><span class="n">03 · ZONAS RESTRITAS</span>Muitas cidades restringem a entrada de carros no centro (as ZBE europeias, por exemplo). Avisem a recepção do hotel antes de chegar dirigindo.</div>
+    <div class="tip"><span class="n">04 · REVEZAMENTO</span>Em qualquer trecho acima de umas 4 horas, revezem entre os motoristas habilitados do grupo.</div>
     <div class="tip"><span class="n">05 · DOCUMENTOS</span>Levem CNH + Permissão Internacional para Dirigir, passaporte, e cartão de crédito do condutor principal (caução).</div>
-    <div class="tip"><span class="n">06 · FOTOS</span>Subam as fotos do grupo direto na <a href="https://drive.google.com/drive/folders/1VD2nYaItHTJG6dJl77rWdwvDErywCqzG?usp=drive_link" target="_blank" rel="noopener" style="color:var(--rust); text-decoration:underline;">pasta do Drive</a> — organizem por cidade se possível, facilita depois.</div>
-  </div>
-</div>
-
-<div class="live-note">
-  <div class="box" id="live-status">🔄 Verificando conexão com o servidor…</div>
-  <div class="quote-bar" id="quote-bar" hidden>
-    <button type="button" id="quote-refresh">💰 Atualizar cotações</button>
-    <span id="quote-status"></span>
-  </div>
-  <div class="quote-bar" id="flight-bar" hidden>
-    <button type="button" id="flight-refresh">✈️ Cotar passagem (ida e volta)</button>
-    <span id="flight-status"></span>
-  </div>
-</div>
-
-<div class="panel" id="galeria">
-  <h3>📸 Galeria do grupo</h3>
-  <p class="sub" style="color:rgba(239,231,214,0.65); font-size:0.9rem; margin-top:-0.6rem; margin-bottom:1.1rem;">
-    Escolha uma foto do celular ou computador e clique em "Adicionar foto" — ela fica salva aqui pra todo mundo ver (jpg, png, gif ou webp, até 15MB).
-  </p>
-  <form class="gallery-form" id="photo-form">
-    <input type="text" name="p-name" placeholder="Seu nome" required maxlength="40">
-    <input type="text" name="p-city" placeholder="Cidade / legenda" required maxlength="60">
-    <input type="file" class="full" name="p-file" accept="image/jpeg,image/png,image/gif,image/webp" required>
-    <button type="submit">Adicionar foto</button>
-  </form>
-  <div class="gallery-grid" id="gallery-grid">
-    <div class="empty-state">Carregando galeria…</div>
-  </div>
-</div>
-
-<div class="panel" id="chat">
-  <h3>💬 Chat do grupo</h3>
-  <div class="chat-box">
-    <div class="chat-messages" id="chat-messages">
-      <div class="empty-state">Carregando mensagens…</div>
-    </div>
-    <form class="chat-form" id="chat-form">
-      <input type="text" name="chat-name" placeholder="Nome" required maxlength="40">
-      <input type="text" name="chat-text" placeholder="Escreva uma mensagem…" required maxlength="500">
-      <button type="submit">Enviar</button>
-    </form>
+    <div class="tip"><span class="n">06 · FOTOS</span>Combinem uma pasta compartilhada para as fotos do grupo e organizem por cidade — facilita muito depois da viagem.</div>
   </div>
 </div>
 
 <footer>
-  Roteiro Ibérico · 14–31 out 2026 · 7 passageiros · atualize esta página com o grupo antes de imprimir/fixar os planos finais
+  Planejador de roteiros · preços são estimativas do Google Hotels/Flights e mudam até a reserva
 </footer>
 
 <script>
 (function(){
-  const statusEl = document.getElementById('live-status');
+  'use strict';
+
+  /* ---------------- utilidades ---------------- */
 
   function escapeHtml(str){
-    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    return String(str).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
   }
 
   async function api(path, opts){
     const res = await fetch(path, opts);
+    let body = null;
+    try{ body = await res.json(); }catch(e){}
     if(!res.ok){
-      let msg = 'Erro no servidor';
-      try{ msg = (await res.json()).error || msg; }catch(e){}
-      throw new Error(msg);
+      const err = new Error((body && body.error) || 'Erro no servidor');
+      err.status = res.status;
+      err.body = body;
+      throw err;
     }
-    return res.json();
+    return body;
   }
 
-  /* ---------------- GALLERY ---------------- */
-  function renderGallery(photos){
-    const grid = document.getElementById('gallery-grid');
-    if(!photos.length){
-      grid.innerHTML = '<div class="empty-state">Nenhuma foto ainda — seja o primeiro a adicionar!</div>';
-      return;
-    }
-    grid.innerHTML = photos.slice().reverse().map(p => `
-      <div class="photo-card">
-        <button class="photo-del" data-id="${escapeHtml(p.id)}" title="Apagar foto" aria-label="Apagar foto">×</button>
-        <img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.city)}" loading="lazy" onerror="this.style.display='none'">
-        <div class="meta">
-          <span class="who">${escapeHtml(p.name)}</span>
-          <div class="cap">${escapeHtml(p.city)}</div>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  async function initGallery(){
-    try{
-      renderGallery(await api('/api/photos'));
-    }catch(e){
-      document.getElementById('gallery-grid').innerHTML = '<div class="empty-state">Não consegui carregar a galeria agora.</div>';
-    }
-
-    document.getElementById('gallery-grid').addEventListener('click', async (e) => {
-      const btn = e.target.closest('.photo-del');
-      if(!btn) return;
-      if(!confirm('Apagar esta foto pra todo mundo?')) return;
-      btn.disabled = true;
-      try{
-        const res = await fetch('/api/photos/' + encodeURIComponent(btn.dataset.id), { method: 'DELETE' });
-        if(!res.ok) throw new Error('Não consegui apagar agora.');
-        renderGallery(await api('/api/photos'));
-      }catch(err){
-        alert(err.message || 'Não consegui apagar agora.');
-        btn.disabled = false;
-      }
-    });
-
-    const form = document.getElementById('photo-form');
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = form.querySelector('button');
-      btn.disabled = true;
-      try{
-        const fd = new FormData();
-        fd.set('name', form.querySelector('[name="p-name"]').value.trim());
-        fd.set('city', form.querySelector('[name="p-city"]').value.trim());
-        const fileInput = form.querySelector('[name="p-file"]');
-        if(!fileInput.files[0]) throw new Error('Escolha uma foto primeiro.');
-        fd.set('photo', fileInput.files[0]);
-
-        const res = await fetch('/api/upload', { method: 'POST', body: fd });
-        if(!res.ok){
-          let msg = 'Não consegui salvar a foto agora.';
-          try{ msg = (await res.json()).error || msg; }catch(e){}
-          throw new Error(msg);
-        }
-        renderGallery(await api('/api/photos'));
-        form.reset();
-      }catch(err){
-        alert(err.message || 'Não consegui salvar a foto agora. Tente de novo em alguns segundos.');
-      }finally{
-        btn.disabled = false;
-      }
-    });
-
-    setInterval(async () => {
-      try{ renderGallery(await api('/api/photos')); }catch(e){}
-    }, 12000);
-  }
-
-  /* ---------------- CHAT ---------------- */
-  function fmtTime(ts){
-    const d = new Date(ts);
-    return d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-  }
-
-  function renderChat(messages){
-    const box = document.getElementById('chat-messages');
-    if(!messages.length){
-      box.innerHTML = '<div class="empty-state">Nenhuma mensagem ainda — comecem a combinar os detalhes!</div>';
-      return;
-    }
-    const wasAtBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 20;
-    box.innerHTML = messages.map(m => `
-      <div class="msg">
-        <span class="who">${escapeHtml(m.name)}</span>
-        ${escapeHtml(m.text)}
-        <span class="ts">${fmtTime(m.ts)}</span>
-      </div>
-    `).join('');
-    if(wasAtBottom || messages.length <= 5) box.scrollTop = box.scrollHeight;
-  }
-
-  async function initChat(){
-    try{
-      renderChat(await api('/api/chat'));
-    }catch(e){
-      document.getElementById('chat-messages').innerHTML = '<div class="empty-state">Não consegui carregar as mensagens agora.</div>';
-    }
-
-    const form = document.getElementById('chat-form');
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = form.querySelector('button');
-      btn.disabled = true;
-      try{
-        const fd = new FormData(form);
-        const text = fd.get('chat-text').trim();
-        const name = fd.get('chat-name').trim();
-        if(!text || !name) return;
-        await api('/api/chat', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({name, text})
-        });
-        renderChat(await api('/api/chat'));
-        form.querySelector('input[name="chat-text"]').value = '';
-      }catch(err){
-        alert(err.message || 'Não consegui enviar a mensagem agora. Tente de novo em alguns segundos.');
-      }finally{
-        btn.disabled = false;
-      }
-    });
-
-    setInterval(async () => {
-      try{ renderChat(await api('/api/chat')); }catch(e){}
-    }, 6000);
-  }
-
-  /* ---------------- COTAÇÕES ---------------- */
-  /* Os preços são buscados pelo servidor e guardados em cache; a página só
-     lê o que já está salvo. Por isso cada cotação mostra quando foi capturada
-     — um preço de hotel envelhece em horas. */
-  function timeAgo(ts){
-    const mins = Math.round((Date.now() - ts) / 60000);
-    if(mins < 1) return 'agora';
-    if(mins < 60) return 'há ' + mins + ' min';
-    const hrs = Math.round(mins / 60);
-    if(hrs < 24) return 'há ' + hrs + 'h';
-    return 'há ' + Math.round(hrs / 24) + 'd';
-  }
-
-  function sourceLabel(source){
-    const labels = { 'serpapi-google-hotels': 'Google Hotels', 'serpapi-google-flights': 'Google Flights' };
-    return labels[source] || source || '';
-  }
-
-  /* ---------------- RESUMO DE CUSTOS ---------------- */
-  /* Soma direto os valores cotados (2 pessoas/1 quarto por hospedagem, 2
-     passageiros no voo) sem tentar escalar pro tamanho real do grupo — é uma
-     estimativa, não o custo fechado da viagem inteira. */
-  let lastHotelQuotes = {};
-  let lastFlightQuotes = {};
-  const HOTEL_STAYS_TOTAL = document.querySelectorAll('[data-quote]').length;
-  // Duas paradas (ida e volta) apontam pra mesma rota via data-flight, então
-  // conta valores únicos em vez de elementos.
-  const FLIGHT_ROUTES_TOTAL = new Set(Array.from(document.querySelectorAll('[data-flight]')).map(el => el.dataset.flight)).size;
-
+  // Os preços vêm como texto ("R$ 4.240") porque é assim que a fonte
+  // entrega; para somar e ordenar basta os dígitos.
   function parseValor(str){
     const digits = String(str || '').replace(/[^0-9]/g, '');
     return digits ? parseInt(digits, 10) : 0;
   }
 
-  // Cotações da busca "outra data" ficam no mesmo mapa, com id sufixado
-  // "-alt" — os contadores/resumo da data principal precisam excluí-las, ou
-  // uma busca alternativa infla "X de 8 com preço" e o total geral.
-  function primaryOnly(obj){
-    const out = {};
-    for(const k in obj){
-      if(!k.endsWith('-alt')) out[k] = obj[k];
+  function fmtBRL(n){ return 'R$ ' + n.toLocaleString('pt-BR'); }
+
+  // "2027-05-04" -> "04/05". O ano fica no cabeçalho, então as linhas não o repetem.
+  function fmtDia(iso){
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+    return m ? m[3] + '/' + m[2] : (iso || '');
+  }
+  function fmtDiaAno(iso){
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+    return m ? m[3] + '/' + m[2] + '/' + m[1] : (iso || '');
+  }
+  function noites(n){ return n + (n === 1 ? ' noite' : ' noites'); }
+
+  /* ---------------- estado ---------------- */
+
+  const state = {
+    searchEnabled: false,
+    trips: [],
+    current: null,   // roteiro aberto, ou null na lista
+    polling: false,
+  };
+
+  const el = function(id){ return document.getElementById(id); };
+
+  /* ---------------- totais ---------------- */
+
+  // Soma voo + TODOS os hotéis: as cidades são trechos consecutivos de uma
+  // viagem só, não opções concorrentes, então o custo da janela é o voo mais
+  // cada estadia. Devolve null se faltar qualquer preço — um roteiro pela
+  // metade não dá pra somar nem ranquear, e um total que ignora a cidade que
+  // falhou seria mentira.
+  function candidateTotal(c){
+    if(!c.flight || !c.flight.price) return null;
+    const hotels = c.hotels || [];
+    if(!hotels.length) return null;
+    let total = parseValor(c.flight.price);
+    for(const h of hotels){
+      if(!h.price) return null;
+      total += parseValor(h.price);
     }
-    return out;
+    return total;
   }
 
-  function fmtBRL(n){
-    return 'R$ ' + n.toLocaleString('pt-BR');
+  // Menor total já apurado de um roteiro, pra mostrar no card da lista.
+  function bestTotal(trip){
+    if(!trip.search || !trip.search.candidates) return null;
+    let best = null;
+    for(const c of trip.search.candidates){
+      const t = candidateTotal(c);
+      if(t !== null && (best === null || t < best)) best = t;
+    }
+    return best;
   }
 
-  function renderResumo(){
-    const panel = document.getElementById('resumo');
-    const box = document.getElementById('resumo-box');
-    if(!panel || !box) return;
+  function tripNights(trip){
+    return (trip.cities || []).reduce(function(n, c){ return n + (c.nights || 0); }, 0);
+  }
 
-    const hotelQuoted = Object.values(lastHotelQuotes).filter(q => q.price);
-    const flightQuoted = Object.values(lastFlightQuotes).filter(q => q.price);
-    if(!hotelQuoted.length && !flightQuoted.length){
-      panel.hidden = true;
+  /* ---------------- lista de roteiros ---------------- */
+
+  function renderList(){
+    const box = el('trip-list');
+    if(!state.trips.length){
+      box.innerHTML = '<div class="empty">Nenhum roteiro salvo ainda.<br>Clique em <strong>+ Novo roteiro</strong> pra montar o primeiro.</div>';
       return;
     }
-    panel.hidden = false;
+    box.innerHTML = '<div class="trip-cards">' + state.trips.map(function(t){
+      const best = bestTotal(t);
+      const cidades = (t.cities || []).map(function(c){
+        return escapeHtml(c.name) + ' (' + c.nights + ')';
+      }).join(' → ');
+      const preco = best === null
+        ? (t.search ? 'cotação incompleta' : 'ainda sem cotação')
+        : '<span class="preco">a partir de ' + fmtBRL(best) + '</span>';
+      return '<button type="button" class="trip-card" data-id="' + escapeHtml(t.id) + '">' +
+        '<span class="nome">' + escapeHtml(t.name) + '</span>' +
+        '<span class="rota">' + escapeHtml(t.origin) + ' → ' + escapeHtml(t.dest) + '</span>' +
+        '<div class="linha">' + cidades + ' · ' + noites(tripNights(t)) + '</div>' +
+        '<div class="linha">' + escapeHtml(fmtDiaAno(t.windowStart)) + ' a ' + escapeHtml(fmtDiaAno(t.windowEnd)) + ' · ' + preco + '</div>' +
+        '</button>';
+    }).join('') + '</div>';
 
-    const totalHoteis = hotelQuoted.reduce((sum, q) => sum + parseValor(q.price), 0);
-    const totalVoo = flightQuoted.reduce((sum, q) => sum + parseValor(q.price), 0);
-    const totalGeral = totalHoteis + totalVoo;
-    const porPessoa = totalGeral / 2;
-    const completo = hotelQuoted.length === HOTEL_STAYS_TOTAL && flightQuoted.length === FLIGHT_ROUTES_TOTAL;
-
-    box.innerHTML =
-      '<div class="resumo-line"><span>Hotéis (' + hotelQuoted.length + '/' + HOTEL_STAYS_TOTAL + ' cotados)</span><span>' + fmtBRL(totalHoteis) + '</span></div>' +
-      '<div class="resumo-line"><span>Passagem aérea (' + flightQuoted.length + '/' + FLIGHT_ROUTES_TOTAL + ' cotada)</span><span>' + fmtBRL(totalVoo) + '</span></div>' +
-      '<div class="resumo-line total"><span>Total geral</span><span>' + fmtBRL(totalGeral) + '</span></div>' +
-      '<div class="resumo-line total"><span>Total por pessoa (2 pax)</span><span>' + fmtBRL(porPessoa) + '</span></div>' +
-      (completo ? '' : '<p class="resumo-note">Estimativa parcial — nem tudo foi cotado ainda.</p>');
-  }
-
-  /* ---------------- COTAR OUTRA DATA (ROTEIRO INTEIRO) ---------------- */
-  /* Só faz sentido se hotel E voo estiverem habilitados no servidor (mesma
-     chave da SerpApi) — o painel fica escondido até os dois confirmarem. */
-  let quotesOn = false;
-  let flightsOn = false;
-  let altSearchInited = false;
-
-  function maybeInitAltSearch(){
-    if(altSearchInited || !quotesOn || !flightsOn) return;
-    altSearchInited = true;
-    initAltSearch();
-  }
-
-  function renderAltResult(newStart, newEnd, altHotels, altFlights){
-    const box = document.getElementById('alt-result');
-    const hotelTotal = altHotels.filter(q => q.price).reduce((s, q) => s + parseValor(q.price), 0);
-    const flightTotal = altFlights.filter(q => q.price).reduce((s, q) => s + parseValor(q.price), 0);
-    const grand = hotelTotal + flightTotal;
-
-    const hotelRows = altHotels.map(q => {
-      const val = q.price
-        ? q.price + (q.match === 'similar' && q.found ? ' (similar: ' + q.found + ')' : '')
-        : 'sem cotação';
-      return '<div class="resumo-line"><span>' + escapeHtml(q.city || q.id) + '</span><span>' + escapeHtml(val) + '</span></div>';
-    }).join('');
-
-    const flightRows = altFlights.map(q => {
-      const val = q.price ? (q.currency + ' ' + q.price) : 'sem cotação';
-      return '<div class="resumo-line"><span>Passagem aérea</span><span>' + escapeHtml(val) + '</span></div>';
-    }).join('');
-
-    box.innerHTML =
-      '<p class="alt-status">Nova janela: ' + escapeHtml(newStart) + ' a ' + escapeHtml(newEnd) + '</p>' +
-      '<div class="resumo-box">' + hotelRows + flightRows +
-      '<div class="resumo-line total"><span>Total geral (opção alternativa)</span><span>' + fmtBRL(grand) + '</span></div>' +
-      '<div class="resumo-line total"><span>Total por pessoa (2 pax)</span><span>' + fmtBRL(grand / 2) + '</span></div>' +
-      '</div>';
-  }
-
-  function initAltSearch(){
-    const panel = document.getElementById('alt-search');
-    const startInput = document.getElementById('alt-start');
-    const btn = document.getElementById('alt-refresh');
-    const statusText = document.getElementById('alt-status');
-    panel.hidden = false;
-
-    btn.addEventListener('click', async () => {
-      const startDate = startInput.value;
-      if(!startDate){
-        statusText.textContent = 'Escolha uma data.';
-        return;
-      }
-      btn.disabled = true;
-      statusText.textContent = 'Cotando o roteiro inteiro pra essa data…';
-      document.getElementById('alt-result').innerHTML = '';
-
-      let res;
-      try{
-        res = await fetch('/api/alt-search', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({startDate})
-        });
-      }catch(e){
-        statusText.textContent = 'Não consegui iniciar a busca agora.';
-        btn.disabled = false;
-        return;
-      }
-
-      if(res.status === 422){
-        statusText.textContent = 'Data inválida.';
-        btn.disabled = false;
-        return;
-      }
-      if(res.status === 429){
-        let wait = 0;
-        try{ wait = (await res.json()).retryAfter || 0; }catch(e){}
-        statusText.textContent = 'Busca alternativa recente demais — tente de novo em ' +
-                                 Math.ceil(wait / 3600) + 'h.';
-        btn.disabled = false;
-        return;
-      }
-      if(!res.ok){
-        statusText.textContent = 'Não consegui iniciar a busca agora.';
-        btn.disabled = false;
-        return;
-      }
-
-      let startedAt = Date.now();
-      let newStart = startDate;
-      let newEnd = '';
-      try{
-        const data = await res.json();
-        if(typeof data.startedAt === 'number') startedAt = data.startedAt;
-        newStart = data.newStart || newStart;
-        newEnd = data.newEnd || '';
-      }catch(e){}
-
-      const total = HOTEL_STAYS_TOTAL + FLIGHT_ROUTES_TOTAL;
-      let altHotels = [];
-      let altFlights = [];
-
-      for(let i = 0; i < 30; i++){
-        await new Promise(r => setTimeout(r, 5000));
-        try{
-          const hotelData = (await api('/api/quotes')).quotes || {};
-          const flightData = (await api('/api/flights')).flights || {};
-          altHotels = Object.values(hotelData).filter(q => q.id && q.id.endsWith('-alt') && q.ts >= startedAt);
-          altFlights = Object.values(flightData).filter(q => q.id && q.id.endsWith('-alt') && q.ts >= startedAt);
-        }catch(e){
-          continue;
-        }
-        const done = altHotels.length + altFlights.length;
-        if(done >= total){
-          break;
-        }
-        statusText.textContent = 'Cotando… ' + done + ' de ' + total + ' itens atualizados.';
-      }
-
-      if(altHotels.length + altFlights.length > 0){
-        renderAltResult(newStart, newEnd, altHotels, altFlights);
-      }
-      statusText.textContent = 'Cotação de ' + newStart + ' a ' + newEnd + ' concluída.';
-      btn.disabled = false;
+    Array.prototype.forEach.call(box.querySelectorAll('.trip-card'), function(card){
+      card.addEventListener('click', function(){ openTrip(card.dataset.id); });
     });
   }
 
-  /* ---------------- OUTRO DESTINO: MIAMI / FORT LAUDERDALE ---------------- */
-  /* Busca de datas flexíveis pra um destino novo (maio 2027), sem relação com
-     o roteiro Ibérico acima. O servidor testa até 8 janelas de data dentro do
-     período informado e cota voo + hotel (Downtown Miami e Fort Lauderdale)
-     pra cada uma — essa função só lê o resultado e ordena pelo total mais
-     barato (voo + o mais barato dos dois hotéis). Mesmo esquema de
-     start/poll dos outros painéis, mas guardado como uma "run" inteira em vez
-     de cotações por ID fixo, já que as datas mudam a cada busca. */
-  let miamiSearchInited = false;
+  /* ---------------- linhas de cidade ---------------- */
 
-  function maybeInitMiamiSearch(){
-    if(miamiSearchInited || !quotesOn || !flightsOn) return;
-    miamiSearchInited = true;
-    initMiamiSearch();
+  const MAX_CITIES = 4;   // espelha trip.MaxHotelCities no servidor
+
+  function cityRows(){
+    return Array.prototype.slice.call(document.querySelectorAll('#city-list .city-row'));
   }
 
-  // Soma voo + o mais barato dos dois hotéis (o grupo ficaria numa cidade só,
-  // não nas duas), ou null se faltar preço de voo ou dos dois hotéis.
-  // Soma voo + o mais barato dos hotéis cotados nas cidades escolhidas (o
-  // grupo ficaria numa cidade só, não em todas), ou null se faltar preço de
-  // voo ou de todos os hotéis.
-  function candidateTotal(c){
-    if(!c.flight || !c.flight.price) return null;
-    const flight = parseValor(c.flight.price);
-    const priced = (c.hotels || []).filter(h => h.price);
-    if(!priced.length) return null;
-    let cheapest = priced[0];
-    for(const h of priced){
-      if(parseValor(h.price) < parseValor(cheapest.price)) cheapest = h;
+  // Renumera as linhas e recalcula o total. A ordem das linhas é a ordem da
+  // viagem — o servidor encadeia os check-ins nessa sequência —, então o
+  // número na frente não é enfeite: diz em que ordem as cidades entram.
+  function refreshCityRows(){
+    const rows = cityRows();
+    let total = 0;
+    rows.forEach(function(row, i){
+      row.querySelector('.seq').textContent = (i + 1) + '.';
+      row.querySelector('.drop').hidden = rows.length <= 1;
+      total += parseInt(row.querySelector('input[type="number"]').value, 10) || 0;
+    });
+    el('total-nights').textContent = noites(total) + ' no total';
+    el('add-city').disabled = rows.length >= MAX_CITIES;
+  }
+
+  function addCityRow(name, nights){
+    const list = el('city-list');
+    if(cityRows().length >= MAX_CITIES) return;
+    const row = document.createElement('div');
+    row.className = 'city-row';
+    row.innerHTML =
+      '<span class="seq"></span>' +
+      '<input type="text" placeholder="Cidade (ex.: Orlando)">' +
+      '<input type="number" min="1" max="21">' +
+      '<span class="unit">noites</span>' +
+      '<button type="button" class="drop" title="Remover cidade">✕</button>';
+    row.querySelector('input[type="text"]').value = name || '';
+    row.querySelector('input[type="number"]').value = nights || 3;
+    row.querySelector('.drop').addEventListener('click', function(){
+      row.remove();
+      refreshCityRows();
+    });
+    row.querySelector('input[type="number"]').addEventListener('input', refreshCityRows);
+    list.appendChild(row);
+    refreshCityRows();
+  }
+
+  function citiesPayload(){
+    return cityRows().map(function(row){
+      return {
+        name: row.querySelector('input[type="text"]').value.trim(),
+        nights: parseInt(row.querySelector('input[type="number"]').value, 10) || 0,
+      };
+    }).filter(function(c){ return c.name !== ''; });
+  }
+
+  /* ---------------- abrir / fechar ---------------- */
+
+  function showList(){
+    state.current = null;
+    el('detail').hidden = true;
+    el('trips').hidden = false;
+    document.querySelector('.hero').hidden = false;
+    renderList();
+  }
+
+  function fillForm(trip){
+    el('f-name').value = trip ? trip.name : '';
+    el('f-origin').value = trip ? trip.origin : '';
+    el('f-dest').value = trip ? trip.dest : '';
+    el('f-adults').value = trip ? trip.adults : 2;
+    el('f-start').value = trip ? trip.windowStart : '';
+    el('f-end').value = trip ? trip.windowEnd : '';
+    el('city-list').innerHTML = '';
+    const cities = (trip && trip.cities && trip.cities.length) ? trip.cities : [{name:'', nights:3}];
+    cities.forEach(function(c){ addCityRow(c.name, c.nights); });
+  }
+
+  function openEditor(trip){
+    state.current = trip;
+    el('trips').hidden = true;
+    el('detail').hidden = false;
+    el('detail-title').textContent = trip ? trip.name : 'Novo roteiro';
+    el('delete-trip').hidden = !trip;
+    el('run-search').hidden = !(trip && state.searchEnabled);
+    el('detail-status').textContent = '';
+    el('detail-status').className = 'status';
+    fillForm(trip);
+    renderResult(trip);
+    window.scrollTo(0, 0);
+  }
+
+  async function openTrip(id){
+    try{
+      const data = await api('/api/trips/' + encodeURIComponent(id));
+      openEditor(data.trip);
+      // Um roteiro cuja busca ficou pela metade (deploy no meio, aba
+      // fechada) volta a ser acompanhado ao ser aberto, em vez de ficar
+      // parado num estado incompleto sem explicação.
+      if(data.trip.search && !data.trip.search.done){
+        pollSearch(data.trip.id, data.trip.search.startedAt);
+      }
+    }catch(e){
+      setStatus('trips-status', e.message, true);
     }
-    return { total: flight + parseValor(cheapest.price), cheapestCity: cheapest.city };
   }
+
+  function setStatus(id, msg, isErr){
+    const node = el(id);
+    node.textContent = msg || '';
+    node.className = 'status' + (isErr ? ' err' : '');
+  }
+
+  /* ---------------- salvar / apagar ---------------- */
+
+  function formBody(){
+    return {
+      name: el('f-name').value.trim(),
+      origin: el('f-origin').value.trim().toUpperCase(),
+      dest: el('f-dest').value.trim().toUpperCase(),
+      adults: parseInt(el('f-adults').value, 10) || 0,
+      windowStart: el('f-start').value,
+      windowEnd: el('f-end').value,
+      cities: citiesPayload(),
+    };
+  }
+
+  async function saveTrip(){
+    const body = formBody();
+    if(!body.name || !body.origin || !body.dest || !body.windowStart || !body.windowEnd || !body.cities.length){
+      setStatus('detail-status', 'Preencha nome, origem, destino, o período e ao menos uma cidade.', true);
+      return;
+    }
+    const btn = el('save-trip');
+    btn.disabled = true;
+    try{
+      const existing = state.current;
+      const saved = existing
+        ? await api('/api/trips/' + encodeURIComponent(existing.id), {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body),
+          })
+        : await api('/api/trips', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body),
+          });
+      await reloadTrips();
+      openEditor(saved);
+      setStatus('detail-status',
+        existing && existing.search && !saved.search
+          ? 'Roteiro salvo. Como as cidades ou as datas mudaram, a cotação anterior foi descartada — cote de novo.'
+          : 'Roteiro salvo.');
+    }catch(e){
+      setStatus('detail-status', e.message, true);
+    }finally{
+      btn.disabled = false;
+    }
+  }
+
+  async function deleteTrip(){
+    if(!state.current) return;
+    if(!confirm('Apagar o roteiro "' + state.current.name + '" e a cotação dele?')) return;
+    try{
+      await api('/api/trips/' + encodeURIComponent(state.current.id), { method: 'DELETE' });
+      await reloadTrips();
+      showList();
+    }catch(e){
+      setStatus('detail-status', e.message, true);
+    }
+  }
+
+  async function reloadTrips(){
+    const data = await api('/api/trips');
+    state.trips = data.trips || [];
+  }
+
+  /* ---------------- cotação ---------------- */
+
+  async function runSearch(){
+    if(!state.current) return;
+    const id = state.current.id;
+    const btn = el('run-search');
+    btn.disabled = true;
+    setStatus('detail-status', 'Cotando as melhores datas…');
+    el('result').innerHTML = '';
+    el('print-wrap').hidden = true;
+
+    let data;
+    try{
+      data = await api('/api/trips/' + encodeURIComponent(id) + '/search', { method: 'POST' });
+    }catch(e){
+      if(e.status === 429){
+        const wait = (e.body && e.body.retryAfter) || 0;
+        setStatus('detail-status', 'Busca recente demais — tente de novo em ' + Math.ceil(wait / 3600) + 'h. ' +
+          'A cota de consultas é compartilhada por todos os roteiros.', true);
+      }else{
+        setStatus('detail-status', e.message, true);
+      }
+      btn.disabled = false;
+      return;
+    }
+
+    pollSearch(id, data.startedAt, data.candidates * (1 + data.cities));
+  }
+
+  // O servidor grava o progresso a cada candidata, então acompanhar é só
+  // reler o roteiro. startedAt é relógio do servidor e é comparado com o
+  // startedAt gravado — nunca com Date.now() do navegador, que pode estar
+  // fora de sincronia.
+  async function pollSearch(id, startedAt, totalSearches){
+    if(state.polling) return;
+    state.polling = true;
+    const btn = el('run-search');
+    btn.disabled = true;
+
+    try{
+      for(let i = 0; i < 90; i++){
+        await new Promise(function(r){ setTimeout(r, 5000); });
+        if(!state.current || state.current.id !== id) return;   // usuário saiu do roteiro
+
+        let trip;
+        try{
+          trip = (await api('/api/trips/' + encodeURIComponent(id))).trip;
+        }catch(e){
+          continue;
+        }
+        if(!trip.search || trip.search.startedAt !== startedAt) continue;
+
+        state.current = trip;
+        renderResult(trip);
+
+        if(trip.search.done){
+          setStatus('detail-status', 'Cotação concluída — ' + trip.search.candidates.length + ' janela(s) de data comparadas.');
+          await reloadTrips();
+          return;
+        }
+        const done = trip.search.candidates.reduce(function(n, c){
+          return n + (c.flight && c.flight.ts ? 1 : 0) +
+                 (c.hotels || []).filter(function(h){ return h.ts; }).length;
+        }, 0);
+        setStatus('detail-status', 'Cotando… ' + done + (totalSearches ? ' de ' + totalSearches : '') + ' itens atualizados.');
+      }
+      setStatus('detail-status', 'A cotação está demorando mais que o esperado — reabra o roteiro daqui a pouco pra ver o resultado.', true);
+    }finally{
+      state.polling = false;
+      btn.disabled = false;
+    }
+  }
+
+  /* ---------------- resultado ---------------- */
 
   function hotelLine(q){
     const label = (q && q.city) || 'hotel';
+    const periodo = q && q.checkin && q.checkout
+      ? ' <span class="stay-dates">' + escapeHtml(fmtDia(q.checkin) + '–' + fmtDia(q.checkout)) +
+        ' · ' + noites(q.nights || 0) + '</span>'
+      : '';
     if(!q || !q.ts){
-      return '<div class="resumo-line"><span>' + escapeHtml(label) + '</span><span>cotando…</span></div>';
+      return '<div class="resumo-line"><span>' + escapeHtml(label) + periodo + '</span><span>cotando…</span></div>';
     }
     const classTag = q.class ? ' (' + q.class + '★)' : '';
     const val = q.price ? (q.price + (q.hotel ? ' · ' + q.hotel : '')) : (q.error || 'sem cotação');
-    return '<div class="resumo-line"><span>' + escapeHtml(label + classTag) + '</span><span>' + escapeHtml(val) + '</span></div>';
+    return '<div class="resumo-line"><span>' + escapeHtml(label + classTag) + periodo +
+           '</span><span>' + escapeHtml(val) + '</span></div>';
   }
 
-  // Só pra rotular a origem na linha-resumo abaixo — mesmo mapa GYN/BSB do
-  // servidor (internal/miami.Origins), pequeno o bastante pra duplicar aqui
-  // em vez de expor mais um endpoint só pra isso.
-  const MIAMI_ORIGIN_LABELS = { GYN: 'Goiânia (GYN)', BSB: 'Brasília (BSB)' };
+  // O cabeçalho só aparece no PDF: a impressão esconde o topo da página, e
+  // sem ele a folha sairia sem dizer de que viagem, de que datas e com que
+  // critérios os preços foram levantados.
+  function renderPrintHead(trip){
+    const roteiro = (trip.cities || []).map(function(c){
+      return escapeHtml(c.name) + ' (' + noites(c.nights) + ')';
+    }).join(' → ');
+    el('print-head').innerHTML =
+      '<h2>' + escapeHtml(trip.name) + '</h2>' +
+      '<p class="meta">' + escapeHtml(trip.origin) + ' → ' + escapeHtml(trip.dest) +
+        ' · ' + noites(tripNights(trip)) + ' no total' +
+        ' · a viagem pode começar entre ' + escapeHtml(fmtDiaAno(trip.windowStart)) +
+        ' e ' + escapeHtml(fmtDiaAno(trip.windowEnd)) + '</p>' +
+      '<p class="meta">Cotado em ' + escapeHtml(new Date().toLocaleString('pt-BR')) +
+        ' · ' + trip.adults + ' passageiro(s) · hotéis até 4★ com café da manhã e estacionamento incluídos' +
+        ' · valores sujeitos a mudança até a reserva</p>' +
+      (roteiro ? '<p class="plan">Roteiro: ' + roteiro + '</p>' : '');
+  }
 
-  function renderMiamiResult(run){
-    const box = document.getElementById('miami-result');
-    if(!box) return;
-    if(!run || !run.candidates || !run.candidates.length){
+  function renderResult(trip){
+    const box = el('result');
+    if(!trip || !trip.search || !trip.search.candidates || !trip.search.candidates.length){
       box.innerHTML = '';
+      el('print-head').innerHTML = '';
+      el('print-wrap').hidden = true;
       return;
     }
 
-    const rows = run.candidates.map(c => ({ c, t: candidateTotal(c) }));
-    rows.sort((a, b) => {
+    const rows = trip.search.candidates.map(function(c){
+      return { c: c, t: candidateTotal(c) };
+    });
+    rows.sort(function(a, b){
       if(a.t === null && b.t === null) return 0;
       if(a.t === null) return 1;
       if(b.t === null) return -1;
-      return a.t.total - b.t.total;
+      return a.t - b.t;
     });
 
-    const originLabel = MIAMI_ORIGIN_LABELS[run.origin] || run.origin;
-    const summary = '<p class="alt-status">Janela buscada: ' + escapeHtml(run.windowStart) + ' a ' + escapeHtml(run.windowEnd) +
-      ' · destino ' + escapeHtml(run.dest || '') + ' · ' + run.nights + ' noites · saindo de ' + escapeHtml(originLabel) + '</p>';
-
-    const cards = rows.map(({c, t}, idx) => {
+    box.innerHTML = rows.map(function(row, idx){
+      const c = row.c, t = row.t;
       const flightVal = !c.flight || !c.flight.ts
         ? 'cotando…'
         : (c.flight.price ? (c.flight.currency + ' ' + c.flight.price) : (c.flight.error || 'sem cotação'));
-      const best = idx === 0 && t ? ' <span class="miami-best">★ melhor opção (' + escapeHtml(t.cheapestCity || '') + ')</span>' : '';
-      const hotelRows = (c.hotels || []).map(hotelLine).join('');
+      const best = idx === 0 && t !== null ? ' <span class="best">★ melhor opção</span>' : '';
       return '<div class="resumo-box">' +
-        '<div class="resumo-line total"><span>' + escapeHtml(c.depart) + ' a ' + escapeHtml(c.return) + best + '</span><span>' + (t ? fmtBRL(t.total) : '—') + '</span></div>' +
+        '<div class="resumo-line total"><span>' + escapeHtml(fmtDia(c.depart) + ' a ' + fmtDia(c.return)) + best +
+          '</span><span>' + (t !== null ? fmtBRL(t) : '—') + '</span></div>' +
         '<div class="resumo-line"><span>Voo (ida e volta)</span><span>' + escapeHtml(flightVal) + '</span></div>' +
-        hotelRows +
+        (c.hotels || []).map(hotelLine).join('') +
         '</div>';
     }).join('');
 
-    box.innerHTML = summary + cards;
+    renderPrintHead(trip);
+    el('print-wrap').hidden = false;
   }
 
-  function initMiamiSearch(){
-    const panel = document.getElementById('miami-search');
-    const startInput = document.getElementById('miami-start');
-    const endInput = document.getElementById('miami-end');
-    const destInput = document.getElementById('miami-dest');
-    const citiesInput = document.getElementById('miami-cities');
-    const nightsInput = document.getElementById('miami-nights');
-    const originSelect = document.getElementById('miami-origin');
-    const btn = document.getElementById('miami-refresh');
-    const statusText = document.getElementById('miami-status');
-    const printBtn = document.getElementById('miami-print-pdf');
-    panel.hidden = false;
+  /* ---------------- impressão ---------------- */
 
-    // "Baixar PDF desta busca": window.print() sempre imprime a página
-    // inteira, então pra gerar um PDF só do resultado Miami — sem o roteiro
-    // Ibérico junto — a página entra num modo temporário (body.print-miami)
-    // que a regra @media print usa pra trocar o que fica visível, e sai
-    // desse modo assim que a caixa de impressão fecha.
-    printBtn.addEventListener('click', () => {
-      if(!document.getElementById('miami-result').children.length){
-        alert('Faça uma busca primeiro pra ter o que baixar em PDF.');
-        return;
-      }
-      document.body.classList.add('print-miami');
-      const cleanup = () => document.body.classList.remove('print-miami');
-      window.addEventListener('afterprint', cleanup, { once: true });
-      window.print();
-      // Reforço pro caso o navegador não dispare afterprint (raro, mas
-      // acontece em alguns webviews) — sem isso a página ficaria travada
-      // no modo "só Miami" até a próxima recarga.
-      setTimeout(cleanup, 3000);
-    });
-
-    btn.addEventListener('click', async () => {
-      const windowStart = startInput.value;
-      const windowEnd = endInput.value;
-      const destination = destInput.value.trim().toUpperCase();
-      const hotelCities = citiesInput.value.trim();
-      const nights = parseInt(nightsInput.value, 10);
-      const origin = originSelect.value;
-      if(!windowStart || !windowEnd || !nights || !destination || !hotelCities){
-        statusText.textContent = 'Preencha início, término, destino, cidade(s) de hotel e noites.';
-        return;
-      }
-      if(!/^[A-Z]{3}$/.test(destination)){
-        statusText.textContent = 'Aeroporto de destino deve ter 3 letras (código IATA), ex.: MIA.';
-        return;
-      }
-      btn.disabled = true;
-      statusText.textContent = 'Cotando as melhores datas…';
-      document.getElementById('miami-result').innerHTML = '';
-
-      let res;
-      try{
-        res = await fetch('/api/miami-search', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({windowStart, windowEnd, nights, origin, destination, hotelCities})
-        });
-      }catch(e){
-        statusText.textContent = 'Não consegui iniciar a busca agora.';
-        btn.disabled = false;
-        return;
-      }
-
-      if(res.status === 422){
-        let msg = 'Parâmetros inválidos.';
-        try{ msg = (await res.json()).error || msg; }catch(e){}
-        statusText.textContent = msg;
-        btn.disabled = false;
-        return;
-      }
-      if(res.status === 429){
-        let wait = 0;
-        try{ wait = (await res.json()).retryAfter || 0; }catch(e){}
-        statusText.textContent = 'Busca recente demais — tente de novo em ' +
-                                 Math.ceil(wait / 3600) + 'h.';
-        btn.disabled = false;
-        return;
-      }
-      if(!res.ok){
-        statusText.textContent = 'Não consegui iniciar a busca agora.';
-        btn.disabled = false;
-        return;
-      }
-
-      let startedAt = Date.now();
-      let totalCandidates = 8;
-      let hotelCitiesCount = 2;
-      try{
-        const data = await res.json();
-        if(typeof data.startedAt === 'number') startedAt = data.startedAt;
-        if(typeof data.candidates === 'number') totalCandidates = data.candidates;
-        if(typeof data.hotelCities === 'number') hotelCitiesCount = data.hotelCities;
-      }catch(e){}
-
-      const totalSearches = totalCandidates * (1 + hotelCitiesCount); // voo + N cidades por candidata
-      for(let i = 0; i < 60; i++){
-        await new Promise(r => setTimeout(r, 5000));
-        let run;
-        try{
-          run = (await api('/api/miami-search')).run;
-        }catch(e){
-          continue;
-        }
-        if(!run || run.startedAt !== startedAt || !run.candidates) continue;
-
-        renderMiamiResult(run);
-        const done = run.candidates.reduce((n, c) =>
-          n + (c.flight && c.flight.ts ? 1 : 0) +
-              (c.hotels || []).filter(h => h.ts).length, 0);
-        if(run.done){
-          statusText.textContent = 'Busca concluída — ' + run.candidates.length + ' janela(s) de data comparadas.';
-          break;
-        }
-        statusText.textContent = 'Cotando… ' + done + ' de ' + totalSearches + ' itens atualizados.';
-      }
-
-      btn.disabled = false;
-    });
-  }
-
-  function renderQuotes(quotes){
-    document.querySelectorAll('[data-quote]').forEach(el => {
-      const q = quotes[el.dataset.quote];
-      let badge = el.querySelector('.quote-badge');
-      if(!q){
-        if(badge) badge.remove();
-        return;
-      }
-      if(!badge){
-        badge = document.createElement('span');
-        el.appendChild(badge);
-      }
-      const via = sourceLabel(q.source) ? ' · ' + sourceLabel(q.source) : '';
-      if(q.price){
-        const nights = q.nights ? ' · ' + q.nights + (q.nights > 1 ? ' noites' : ' noite') : '';
-        const similar = q.match === 'similar' && q.found ? ' · similar: ' + q.found : '';
-        badge.className = 'quote-badge' + (similar ? ' similar' : '');
-        badge.removeAttribute('title');
-        if(similar) badge.title = 'Hotel buscado não encontrado na busca — preço é de um hotel parecido (3-4 estrelas) na mesma região';
-        badge.innerHTML = '<span class="val">' + escapeHtml(q.price) + '</span>' +
-                          '<span class="when">' + escapeHtml(timeAgo(q.ts) + nights + via + similar) + '</span>';
-      }else{
-        badge.className = 'quote-badge err';
-        badge.title = q.error || 'sem detalhes';
-        badge.innerHTML = '<span class="val">sem cotação</span>' +
-                          '<span class="when">' + escapeHtml(timeAgo(q.ts) + via) + '</span>';
-      }
-    });
-  }
-
-  function countPriced(quotes){
-    return Object.values(quotes).filter(q => q.price).length;
-  }
-
-  async function initQuotes(){
-    const bar = document.getElementById('quote-bar');
-    const statusText = document.getElementById('quote-status');
-    const btn = document.getElementById('quote-refresh');
-
-    async function load(){
-      const data = await api('/api/quotes');
-      const quotes = data.quotes || {};
-      renderQuotes(quotes);
-      const primary = primaryOnly(quotes);
-      lastHotelQuotes = primary;
-      renderResumo();
-      return primary;
+  // window.print() sempre imprime a página inteira, então a folha é montada
+  // pelo @media print acima: some a interface, fica só a sugestão do roteiro
+  // aberto. Nada de modo temporário aqui — a página só mostra um roteiro por
+  // vez, então não há o que desambiguar.
+  function printSuggestion(){
+    if(!el('result').children.length){
+      alert('Cote o roteiro primeiro pra ter o que imprimir.');
+      return;
     }
+    window.print();
+  }
 
-    let quotes;
+  /* ---------------- boot ---------------- */
+
+  async function boot(){
+    el('new-trip').addEventListener('click', function(){ openEditor(null); });
+    el('add-city').addEventListener('click', function(){ addCityRow('', 3); });
+    el('save-trip').addEventListener('click', saveTrip);
+    el('delete-trip').addEventListener('click', deleteTrip);
+    el('run-search').addEventListener('click', runSearch);
+    el('back-to-list').addEventListener('click', showList);
+    el('print-pdf').addEventListener('click', printSuggestion);
+
     try{
-      quotes = await load();
-    }catch(e){
-      return; // cotações desligadas no servidor (QUOTES_ENABLED=0)
-    }
-    bar.hidden = false;
-    quotesOn = true;
-    maybeInitAltSearch();
-    maybeInitMiamiSearch();
+      const cfg = await api('/api/config');
+      state.searchEnabled = !!cfg.searchEnabled;
+    }catch(e){}
 
-    const total = document.querySelectorAll('[data-quote]').length;
-    if(!Object.keys(quotes).length){
-      statusText.textContent = 'Ainda sem cotação — clique em "Atualizar cotações" (cota compartilhada, use com moderação).';
-    }else{
-      statusText.textContent = countPriced(quotes) + ' de ' + total + ' hospedagens com preço.';
-    }
-
-    btn.addEventListener('click', async () => {
-      btn.disabled = true;
-      statusText.textContent = 'Buscando preços…';
-
-      const res = await fetch('/api/quotes/refresh', { method: 'POST' });
-      if(res.status === 429){
-        let wait = 0;
-        try{ wait = (await res.json()).retryAfter || 0; }catch(e){}
-        statusText.textContent = 'Cotação recente demais — tente de novo em ' +
-                                 Math.ceil(wait / 3600) + 'h.';
-        btn.disabled = false;
-        return;
-      }
-      if(!res.ok){
-        statusText.textContent = 'Não consegui iniciar a busca agora.';
-        btn.disabled = false;
-        return;
-      }
-
-      /* A busca roda em background no servidor (8 hospedagens, espaçadas),
-         então a página relê o cache até toda cotação ter sido refeita depois
-         deste clique — ou até estourar o teto de tentativas. startedAt vem do
-         servidor (mesmo relógio que carimba cada Quote.ts): comparar com o
-         relógio do navegador travava o contador sempre que os dois relógios
-         não batiam exatamente. */
-      let startedAt = Date.now();
-      try{
-        const data = await res.json();
-        if(typeof data.startedAt === 'number') startedAt = data.startedAt;
-      }catch(e){}
-      for(let i = 0; i < 40; i++){
-        await new Promise(r => setTimeout(r, 4000));
-        let updated;
-        try{
-          updated = await load();
-        }catch(e){
-          continue;
-        }
-        const done = Object.values(updated).filter(q => q.ts >= startedAt).length;
-        if(done >= total){
-          break;
-        }
-        statusText.textContent = 'Buscando… ' + done + ' de ' + total + ' atualizadas.';
-      }
-
-      try{
-        statusText.textContent = countPriced(await load()) + ' de ' + total + ' hospedagens com preço.';
-      }catch(e){}
-      btn.disabled = false;
-    });
-  }
-
-  /* ---------------- COTAÇÃO DE PASSAGEM ---------------- */
-  /* Mesmo esquema de cache/timestamp dos hotéis, mas via uma API de verdade
-     (FlightAPI, JSON) em vez de raspar HTML — e sem loop automático: a cota
-     gratuita da FlightAPI é poucas chamadas no total, então só roda quando
-     alguém clica, limitado por um cooldown bem mais longo no servidor. */
-  function renderFlightQuotes(flights){
-    document.querySelectorAll('[data-flight]').forEach(el => {
-      const q = flights[el.dataset.flight];
-      let badge = el.querySelector('.quote-badge');
-      if(!q){
-        if(badge) badge.remove();
-        return;
-      }
-      if(!badge){
-        badge = document.createElement('span');
-        el.appendChild(badge);
-      }
-      const via = sourceLabel(q.source) ? ' · ' + sourceLabel(q.source) : '';
-      const trecho = q.label ? q.label + ' · ' : '';
-      if(q.price){
-        badge.className = 'quote-badge';
-        badge.removeAttribute('title');
-        badge.innerHTML = '<span class="val">' + escapeHtml(q.currency + ' ' + q.price) + '</span>' +
-                          '<span class="when">' + escapeHtml(trecho + timeAgo(q.ts) + via) + '</span>';
-      }else{
-        badge.className = 'quote-badge err';
-        badge.title = q.error || 'sem detalhes';
-        badge.innerHTML = '<span class="val">sem cotação</span>' +
-                          '<span class="when">' + escapeHtml(trecho + timeAgo(q.ts) + via) + '</span>';
-      }
-    });
-  }
-
-  async function initFlightQuotes(){
-    const bar = document.getElementById('flight-bar');
-    const statusText = document.getElementById('flight-status');
-    const btn = document.getElementById('flight-refresh');
-
-    async function load(){
-      const data = await api('/api/flights');
-      const flights = data.flights || {};
-      renderFlightQuotes(flights);
-      const primary = primaryOnly(flights);
-      lastFlightQuotes = primary;
-      renderResumo();
-      return primary;
-    }
-
-    let flightQuotes;
     try{
-      flightQuotes = await load();
+      await reloadTrips();
+      renderList();
     }catch(e){
-      return; // cotação de voo desligada no servidor (sem FLIGHTAPI_KEY)
+      setStatus('trips-status', 'Não consegui carregar os roteiros salvos.', true);
     }
-    bar.hidden = false;
-    flightsOn = true;
-    maybeInitAltSearch();
-    maybeInitMiamiSearch();
-
-    const total = FLIGHT_ROUTES_TOTAL;
-    if(!Object.keys(flightQuotes).length){
-      statusText.textContent = 'Ainda sem cotação — a cota gratuita da FlightAPI é limitada, use com moderação.';
-    }else{
-      statusText.textContent = countPriced(flightQuotes) + ' de ' + total + ' trecho(s) com preço.';
-    }
-
-    btn.addEventListener('click', async () => {
-      btn.disabled = true;
-      statusText.textContent = 'Buscando preço da passagem…';
-
-      const res = await fetch('/api/flights/refresh', { method: 'POST' });
-      if(res.status === 429){
-        let wait = 0;
-        try{ wait = (await res.json()).retryAfter || 0; }catch(e){}
-        statusText.textContent = 'Cotação recente demais — tente de novo em ' +
-                                 Math.ceil(wait / 3600) + 'h.';
-        btn.disabled = false;
-        return;
-      }
-      if(!res.ok){
-        statusText.textContent = 'Não consegui iniciar a busca agora.';
-        btn.disabled = false;
-        return;
-      }
-
-      let startedAt = Date.now();
-      try{
-        const data = await res.json();
-        if(typeof data.startedAt === 'number') startedAt = data.startedAt;
-      }catch(e){}
-
-      /* Preço de ida-e-volta exige duas chamadas sequenciais no servidor
-         (ida, depois volta com o token) — a espera aqui cobre isso (até
-         ~120s) em vez de desistir cedo demais. */
-      for(let i = 0; i < 24; i++){
-        await new Promise(r => setTimeout(r, 5000));
-        let updated;
-        try{
-          updated = await load();
-        }catch(e){
-          continue;
-        }
-        const done = Object.values(updated).filter(q => q.ts >= startedAt).length;
-        if(done >= total){
-          break;
-        }
-      }
-
-      try{
-        statusText.textContent = countPriced(await load()) + ' de ' + total + ' trecho(s) com preço.';
-      }catch(e){}
-      btn.disabled = false;
-    });
   }
 
-  (async function boot(){
-    try{
-      await api('/api/photos');
-      statusEl.textContent = '✅ Conectado — fotos e mensagens são compartilhadas entre todo o grupo em tempo real.';
-    }catch(e){
-      statusEl.textContent = '⚠️ Não consegui conectar ao servidor agora. Atualize a página em alguns instantes.';
-      statusEl.classList.add('offline');
-    }
-    initGallery();
-    initChat();
-    initQuotes();
-    initFlightQuotes();
-
-    document.getElementById('print-pdf').addEventListener('click', () => window.print());
-
-    const togglePrices = document.getElementById('toggle-prices');
-    const showPrices = localStorage.getItem('viagem-show-prices') !== '0';
-    togglePrices.checked = showPrices;
-    document.body.classList.toggle('hide-prices', !showPrices);
-    togglePrices.addEventListener('change', () => {
-      document.body.classList.toggle('hide-prices', !togglePrices.checked);
-      localStorage.setItem('viagem-show-prices', togglePrices.checked ? '1' : '0');
-    });
-  })();
+  boot();
 })();
 </script>
 

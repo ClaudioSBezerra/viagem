@@ -14,53 +14,19 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 )
 
 // maxBody caps how much of a response we read.
 const maxBody = 10 * 1024 * 1024
 
-// Spec describes one hotel stay to price.
-type Spec struct {
-	ID       string
-	Label    string // search text sent to SerpApi, e.g. "Sana Rex Hotel Lisboa"
-	City     string
+// spec is the shape of one hotel search: just the parameters that reach the
+// SerpApi query. CityQuery is the public way to ask for a price; this is the
+// plumbing underneath it.
+type spec struct {
 	Checkin  string
 	Checkout string
 	Adults   int
-	Rooms    int
-}
-
-// Nights returns the stay length, or 0 if the dates don't parse.
-func (s Spec) Nights() int {
-	in, err := time.Parse("2006-01-02", s.Checkin)
-	if err != nil {
-		return 0
-	}
-	out, err := time.Parse("2006-01-02", s.Checkout)
-	if err != nil {
-		return 0
-	}
-	return int(out.Sub(in).Hours() / 24)
-}
-
-// Quote is the result of pricing a Spec. Price is empty when the fetch or the
-// parse failed, in which case Err says why.
-type Quote struct {
-	ID     string `json:"id"`
-	Label  string `json:"label"`
-	City   string `json:"city"`
-	Price  string `json:"price,omitempty"`
-	Nights int    `json:"nights,omitempty"`
-	Source string `json:"source"`
-	// Match is "exato" when Price came from the searched hotel itself, or
-	// "similar" when that hotel wasn't found and Price/Found describe a 3-4
-	// star stand-in in the same search results instead.
-	Match string `json:"match,omitempty"`
-	Found string `json:"found,omitempty"`
-	Err   string `json:"error,omitempty"`
-	Ts    int64  `json:"ts"`
 }
 
 // Fetcher prices Specs against SerpApi's Google Hotels engine.
@@ -97,18 +63,13 @@ type hotelsResponse struct {
 
 // buildURL includes the API key and must never be logged — RedactedURL is the
 // safe version for that.
-func (f *Fetcher) buildURL(query string, s Spec) string {
+func (f *Fetcher) buildURL(query string, s spec) string {
 	q := baseParams(query, s)
 	q.Set("api_key", f.apiKey)
 	return "https://serpapi.com/search.json?" + q.Encode()
 }
 
-// RedactedURL is the same request with the API key omitted, safe for logs.
-func RedactedURL(s Spec) string {
-	return "https://serpapi.com/search.json?" + baseParams(s.Label, s).Encode()
-}
-
-func baseParams(query string, s Spec) url.Values {
+func baseParams(query string, s spec) url.Values {
 	q := url.Values{}
 	q.Set("engine", "google_hotels")
 	q.Set("q", query)
@@ -121,75 +82,8 @@ func baseParams(query string, s Spec) url.Values {
 	return q
 }
 
-// Fetch prices a single stay. It always returns a Quote: on failure the Quote
-// carries Err and an empty Price, so the caller can cache the attempt.
-func (f *Fetcher) Fetch(ctx context.Context, s Spec) Quote {
-	q := Quote{
-		ID:     s.ID,
-		Label:  s.Label,
-		City:   s.City,
-		Nights: s.Nights(),
-		Source: "serpapi-google-hotels",
-		Ts:     time.Now().UnixMilli(),
-	}
-
-	if f.apiKey == "" {
-		q.Err = "SERPAPI_KEY nao configurada"
-		return q
-	}
-
-	parsed, err := f.search(ctx, s.Label, s)
-	if err != nil {
-		q.Err = err.Error()
-		return q
-	}
-
-	if len(parsed.Properties) > 0 {
-		if exact := findByName(parsed.Properties, s.Label); exact != nil {
-			if price := nightlyTotal(*exact, q.Nights); price > 0 {
-				q.Price = fmt.Sprintf("R$ %.0f", price)
-				q.Match = "exato"
-				return q
-			}
-		}
-
-		// O hotel buscado nao apareceu (ou apareceu sem preco) nos resultados
-		// - troca por uma opcao de 3-4 estrelas mais barata na mesma busca,
-		// ja que a regiao e as datas continuam as mesmas.
-		if sub := cheapestInClassRange(parsed.Properties, 3, 4, q.Nights); sub != nil {
-			q.Price = fmt.Sprintf("R$ %.0f", nightlyTotal(*sub, q.Nights))
-			q.Match = "similar"
-			q.Found = sub.Name
-			return q
-		}
-	}
-
-	// Buscar pelo nome do hotel especifico as vezes nao retorna nada (Google
-	// nao reconhece o texto como uma propriedade), mesmo a cidade tendo
-	// hoteis de sobra. Tenta de novo so com a cidade, que e uma busca bem
-	// mais generica e praticamente sempre retorna resultados.
-	broad, err := f.search(ctx, s.City, s)
-	if err != nil {
-		q.Err = err.Error()
-		return q
-	}
-	if len(broad.Properties) == 0 {
-		q.Err = "serpapi nao encontrou nada nessa regiao para essas datas"
-		return q
-	}
-	if sub := cheapestInClassRange(broad.Properties, 3, 4, q.Nights); sub != nil {
-		q.Price = fmt.Sprintf("R$ %.0f", nightlyTotal(*sub, q.Nights))
-		q.Match = "similar"
-		q.Found = sub.Name
-		return q
-	}
-
-	q.Err = "hotel buscado nao encontrado, e nenhuma opcao 3-4 estrelas com preco disponivel nessa regiao"
-	return q
-}
-
 // search runs one google_hotels query and returns the parsed response.
-func (f *Fetcher) search(ctx context.Context, query string, s Spec) (hotelsResponse, error) {
+func (f *Fetcher) search(ctx context.Context, query string, s spec) (hotelsResponse, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, f.buildURL(query, s), nil)
 	if err != nil {
 		return hotelsResponse{}, err
@@ -217,47 +111,6 @@ func (f *Fetcher) search(ctx context.Context, query string, s Spec) (hotelsRespo
 		return hotelsResponse{}, fmt.Errorf("serpapi: %s", parsed.Error)
 	}
 	return parsed, nil
-}
-
-// findByName looks for the searched hotel among the results by a loose,
-// case-insensitive substring match in either direction — property names from
-// SerpApi don't always match our stored label exactly (chain prefixes,
-// rebrands), and requiring an exact match would trigger the "similar hotel"
-// fallback far more often than it should.
-func findByName(props []hotelProperty, label string) *hotelProperty {
-	h := strings.ToLower(label)
-	for i := range props {
-		p := strings.ToLower(props[i].Name)
-		if p == "" {
-			continue
-		}
-		if strings.Contains(h, p) || strings.Contains(p, h) {
-			return &props[i]
-		}
-	}
-	return nil
-}
-
-// cheapestInClassRange returns the lowest-priced property whose star class
-// falls in [min, max], or nil if none has both a class in range and a usable
-// price.
-func cheapestInClassRange(props []hotelProperty, min, max, nights int) *hotelProperty {
-	var best *hotelProperty
-	var bestPrice float64
-	for i := range props {
-		p := &props[i]
-		if p.ExtractedHotelClass < min || p.ExtractedHotelClass > max {
-			continue
-		}
-		price := nightlyTotal(*p, nights)
-		if price <= 0 {
-			continue
-		}
-		if best == nil || price < bestPrice {
-			best, bestPrice = p, price
-		}
-	}
-	return best
 }
 
 // nightlyTotal returns the stay's total price, falling back to rate-per-night

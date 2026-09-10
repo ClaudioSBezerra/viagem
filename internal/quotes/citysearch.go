@@ -8,10 +8,10 @@ import (
 )
 
 // CityQuery is a broad "cheapest hotel matching these filters in this city"
-// search. Unlike Spec/Fetch above — which prices one named property from
-// Stays — this has no specific hotel to look for: it's for the Miami/Fort
-// Lauderdale date-finder (internal/miami), which wants whichever qualifying
-// hotel is cheapest in a given city for a given date window.
+// search: it has no specific hotel to look for, just whichever qualifying
+// property is cheapest in a given city over a given stretch of dates. That
+// is what building an itinerary needs (internal/trip) — the group picks the
+// cities, not the hotels.
 type CityQuery struct {
 	ID       string // result key, e.g. "downtown-miami"
 	City     string // search text sent to SerpApi, e.g. "Downtown Miami"
@@ -42,15 +42,21 @@ func (cq CityQuery) nights() int {
 // CityQuote is the result of a CityQuery: the cheapest qualifying hotel
 // found, or Err explaining why none matched.
 type CityQuote struct {
-	ID     string `json:"id"`
-	City   string `json:"city"`
-	Hotel  string `json:"hotel,omitempty"`
-	Class  int    `json:"class,omitempty"`
-	Price  string `json:"price,omitempty"`
-	Nights int    `json:"nights,omitempty"`
-	Source string `json:"source"`
-	Err    string `json:"error,omitempty"`
-	Ts     int64  `json:"ts"`
+	ID   string `json:"id"`
+	City string `json:"city"`
+	// Checkin/Checkout echo the query's dates. They matter when several
+	// CityQuotes are legs of one itinerary (internal/miami), each with its
+	// own stretch of the trip: without them a result row can't say which
+	// nights it covers, and neither can the printed version.
+	Checkin  string `json:"checkin,omitempty"`
+	Checkout string `json:"checkout,omitempty"`
+	Hotel    string `json:"hotel,omitempty"`
+	Class    int    `json:"class,omitempty"`
+	Price    string `json:"price,omitempty"`
+	Nights   int    `json:"nights,omitempty"`
+	Source   string `json:"source"`
+	Err      string `json:"error,omitempty"`
+	Ts       int64  `json:"ts"`
 }
 
 // FetchCity prices a CityQuery against SerpApi's Google Hotels engine,
@@ -60,11 +66,13 @@ type CityQuote struct {
 func (f *Fetcher) FetchCity(ctx context.Context, cq CityQuery) CityQuote {
 	nights := cq.nights()
 	q := CityQuote{
-		ID:     cq.ID,
-		City:   cq.City,
-		Nights: nights,
-		Source: "serpapi-google-hotels",
-		Ts:     time.Now().UnixMilli(),
+		ID:       cq.ID,
+		City:     cq.City,
+		Checkin:  cq.Checkin,
+		Checkout: cq.Checkout,
+		Nights:   nights,
+		Source:   "serpapi-google-hotels",
+		Ts:       time.Now().UnixMilli(),
 	}
 
 	if f.apiKey == "" {
@@ -72,8 +80,7 @@ func (f *Fetcher) FetchCity(ctx context.Context, cq CityQuery) CityQuote {
 		return q
 	}
 
-	spec := Spec{Checkin: cq.Checkin, Checkout: cq.Checkout, Adults: cq.Adults}
-	parsed, err := f.search(ctx, cq.City, spec)
+	parsed, err := f.search(ctx, cq.City, spec{Checkin: cq.Checkin, Checkout: cq.Checkout, Adults: cq.Adults})
 	if err != nil {
 		q.Err = err.Error()
 		return q
