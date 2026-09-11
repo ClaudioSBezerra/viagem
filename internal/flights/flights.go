@@ -26,16 +26,20 @@ import (
 // still normally run under a couple of megabytes.
 const maxBody = 10 * 1024 * 1024
 
-// Spec describes one round trip to price.
+// Spec describes one trip to price: a round trip by default, or a single
+// one-way leg when OneWay is set (used to price a return flight home from a
+// city other than Dest — see internal/trip's return-airport support). Return
+// is ignored when OneWay is true.
 type Spec struct {
 	ID       string
 	Label    string
 	Origin   string // IATA airport code
 	Dest     string // IATA airport code
 	Depart   string // YYYY-MM-DD
-	Return   string // YYYY-MM-DD
+	Return   string // YYYY-MM-DD, ignored when OneWay
 	Adults   int
 	Currency string
+	OneWay   bool
 }
 
 // Quote is the result of pricing a Spec. Price is empty when any step failed,
@@ -99,8 +103,12 @@ func baseParams(s Spec) url.Values {
 	q.Set("departure_id", s.Origin)
 	q.Set("arrival_id", s.Dest)
 	q.Set("outbound_date", s.Depart)
-	q.Set("return_date", s.Return)
-	q.Set("type", "1") // round trip
+	if s.OneWay {
+		q.Set("type", "2") // one way
+	} else {
+		q.Set("return_date", s.Return)
+		q.Set("type", "1") // round trip
+	}
 	q.Set("adults", strconv.Itoa(s.Adults))
 	q.Set("currency", s.Currency)
 	q.Set("hl", "pt-br")
@@ -108,8 +116,12 @@ func baseParams(s Spec) url.Values {
 	return q
 }
 
-// Fetch prices a single round trip. It always returns a Quote: on failure the
-// Quote carries Err and an empty Price, so the caller can cache the attempt.
+// Fetch prices a single Spec — a round trip, or a one-way leg when OneWay is
+// set. It always returns a Quote: on failure the Quote carries Err and an
+// empty Price, so the caller can cache the attempt. A one-way search never
+// gets back a departure_token (there's no return leg to combine with), so it
+// falls through the same "no token" branch a round trip takes when SerpApi
+// can't offer one, and the outbound price stands as the final price.
 func (f *Fetcher) Fetch(ctx context.Context, s Spec) Quote {
 	q := Quote{
 		ID:       s.ID,

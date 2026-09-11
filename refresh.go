@@ -23,6 +23,11 @@ type searchRequest struct {
 	Nights     int // the whole trip, i.e. every city's nights added up
 	Cities     []trip.CitySpec
 	Candidates []trip.Candidate
+
+	// ReturnAirport, when set, is the airport near the last city — a search
+	// then also prices a one-way flight home from here, alongside (not
+	// instead of) the Origin<->Dest round trip. See store.Trip.ReturnAirport.
+	ReturnAirport string
 }
 
 // searcher prices trips in the background. One run at a time across the
@@ -126,6 +131,34 @@ func (sr *searcher) run(startedAt time.Time, req searchRequest) {
 			log.Printf("busca: voo %s %s->%s %s a %s: %s", req.TripID, req.Origin, req.Dest, c.Depart, c.Return, fq.Err)
 		} else {
 			ok++
+		}
+
+		// The return flight home from the last city is priced separately
+		// from — and alongside, not instead of — the round trip above: it's
+		// an alternative for the group to weigh, not folded into the
+		// candidate's total.
+		if req.ReturnAirport != "" {
+			spaceOut()
+			lastCity := req.Cities[len(req.Cities)-1].Name
+			rq := fetchWithin(flightFetchTimeout, func(ctx context.Context) flights.Quote {
+				return sr.flightFetcher.Fetch(ctx, flights.Spec{
+					ID:       fmt.Sprintf("c%d-volta", i),
+					Label:    fmt.Sprintf("%s → %s (volta a partir de %s)", req.ReturnAirport, req.Origin, lastCity),
+					Origin:   req.ReturnAirport,
+					Dest:     req.Origin,
+					Depart:   c.Return,
+					Adults:   req.Adults,
+					Currency: "BRL",
+					OneWay:   true,
+				})
+			})
+			run.Candidates[i].ReturnFlight = &rq
+			if rq.Err != "" {
+				failed++
+				log.Printf("busca: volta %s %s->%s %s: %s", req.TripID, req.ReturnAirport, req.Origin, c.Return, rq.Err)
+			} else {
+				ok++
+			}
 		}
 
 		// One hotel per leg, each priced only for the nights the group

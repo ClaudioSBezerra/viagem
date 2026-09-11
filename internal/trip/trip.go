@@ -69,13 +69,22 @@ const (
 )
 
 // MaxCandidatesFor is how many departure dates a search over cities-many
-// cities may sample without exceeding SearchBudget. At two cities it works
-// out to the full MaxCandidates.
-func MaxCandidatesFor(cities int) int {
+// cities may sample without exceeding SearchBudget. At two cities (and no
+// return flight priced separately) it works out to the full MaxCandidates.
+//
+// withReturnFlight is true when the itinerary also prices a one-way flight
+// home from the last city (store.Trip.ReturnAirport set) — that's one more
+// SerpApi call per candidate date, spent out of the same budget so it still
+// doesn't grow with the number of cities.
+func MaxCandidatesFor(cities int, withReturnFlight bool) int {
 	if cities < 1 {
 		cities = 1
 	}
-	n := SearchBudget / (1 + cities)
+	perCandidate := 1 + cities
+	if withReturnFlight {
+		perCandidate++
+	}
+	n := SearchBudget / perCandidate
 	if n > MaxCandidates {
 		n = MaxCandidates
 	}
@@ -190,8 +199,8 @@ type Candidate struct {
 // Window generates up to maxCandidates depart/return pairs of the given
 // length, evenly spaced across [start, end]. The returned candidates always
 // include the earliest possible departure and, when more than one fits, the
-// latest one too. Pass MaxCandidatesFor(len(cities)) for maxCandidates, so a
-// longer itinerary spends its search budget on cities instead.
+// latest one too. Pass MaxCandidatesFor(len(cities), ...) for maxCandidates,
+// so a longer itinerary spends its search budget on cities instead.
 func Window(start, end string, nights, maxCandidates int) ([]Candidate, error) {
 	if nights < MinNights || nights > MaxNights {
 		return nil, fmt.Errorf("noites deve ser entre %d e %d", MinNights, MaxNights)

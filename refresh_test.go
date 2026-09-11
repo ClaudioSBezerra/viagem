@@ -34,7 +34,7 @@ func TestSearcherLaysOutItinerary(t *testing.T) {
 		{ID: "orlando", Name: "Orlando", Nights: 3},
 	}
 	nights := trip.TotalNights(cities)
-	candidates, err := trip.Window("2027-05-01", "2027-05-31", nights, trip.MaxCandidatesFor(len(cities)))
+	candidates, err := trip.Window("2027-05-01", "2027-05-31", nights, trip.MaxCandidatesFor(len(cities), false))
 	if err != nil {
 		t.Fatalf("Window: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestSearcherSingleCity(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SaveTrip: %v", err)
 	}
-	candidates, err := trip.Window("2027-05-01", "2027-05-10", 5, trip.MaxCandidatesFor(1))
+	candidates, err := trip.Window("2027-05-01", "2027-05-10", 5, trip.MaxCandidatesFor(1, false))
 	if err != nil {
 		t.Fatalf("Window: %v", err)
 	}
@@ -146,6 +146,63 @@ func TestSearcherSingleCity(t *testing.T) {
 		if c.Hotels[0].Checkin != c.Depart || c.Hotels[0].Checkout != c.Return {
 			t.Errorf("single stay %s-%s should span the whole trip %s-%s",
 				c.Hotels[0].Checkin, c.Hotels[0].Checkout, c.Depart, c.Return)
+		}
+	}
+}
+
+// When the trip has a ReturnAirport, the run must also price a one-way
+// flight home from there — alongside, not instead of, the main round trip.
+// Without one, ReturnFlight stays nil: nothing extra is spent quoting a leg
+// nobody asked for.
+func TestSearcherPricesReturnFlightFromLastCity(t *testing.T) {
+	sr, st := newOfflineSearcher(t)
+	cities := []trip.CitySpec{
+		{ID: "miami", Name: "Miami", Nights: 4},
+		{ID: "orlando", Name: "Orlando", Nights: 3},
+	}
+	nights := trip.TotalNights(cities)
+	candidates, err := trip.Window("2027-05-01", "2027-05-31", nights, trip.MaxCandidatesFor(len(cities), true))
+	if err != nil {
+		t.Fatalf("Window: %v", err)
+	}
+	saved, err := st.SaveTrip(store.Trip{ID: "t1", Name: "Miami+Orlando"}, 0)
+	if err != nil {
+		t.Fatalf("SaveTrip: %v", err)
+	}
+
+	sr.run(time.Now(), searchRequest{
+		TripID: saved.ID, Origin: "GYN", Dest: "MIA", Adults: 2,
+		Nights: nights, Cities: cities, Candidates: candidates,
+		ReturnAirport: "MCO",
+	})
+
+	got, ok := st.GetTrip(saved.ID)
+	if !ok {
+		t.Fatal("trip vanished")
+	}
+	for _, c := range got.Search.Candidates {
+		if c.ReturnFlight == nil {
+			t.Fatalf("candidate %s: ReturnFlight was never set", c.Depart)
+		}
+		if c.ReturnFlight.Ts == 0 {
+			t.Errorf("candidate %s: return flight was never fetched", c.Depart)
+		}
+	}
+
+	// A second run without ReturnAirport must leave ReturnFlight nil, not
+	// carry the previous run's quotes forward.
+	candidates2, err := trip.Window("2027-05-01", "2027-05-31", nights, trip.MaxCandidatesFor(len(cities), false))
+	if err != nil {
+		t.Fatalf("Window: %v", err)
+	}
+	sr.run(time.Now(), searchRequest{
+		TripID: saved.ID, Origin: "GYN", Dest: "MIA", Adults: 2,
+		Nights: nights, Cities: cities, Candidates: candidates2,
+	})
+	got, _ = st.GetTrip(saved.ID)
+	for _, c := range got.Search.Candidates {
+		if c.ReturnFlight != nil {
+			t.Errorf("candidate %s: ReturnFlight set without a ReturnAirport in the request", c.Depart)
 		}
 	}
 }

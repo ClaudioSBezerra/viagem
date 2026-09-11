@@ -43,11 +43,22 @@ Variáveis de ambiente:
   por cidade, para cada janela de data). Roteiros com mais cidades comparam
   menos janelas: 1–2 cidades → 8 janelas, 3 → 6, 4–5 → 4, 6–7 → 3,
   8–10 → 2. A cota gasta por cotação não aumenta com o número de cidades.
+- **Voo de volta a partir da última cidade (opcional):** se a viagem chega
+  num aeroporto e sai de outro — ex.: chega em Miami, roda o roteiro, mas
+  volta de Orlando —, preencha "Voltando de" com o aeroporto da última
+  cidade. O app cota esse trecho **à parte**, um voo só de ida da última
+  cidade de volta pra origem, na data em que o roteiro termina; ele aparece
+  junto do resultado de cada janela mas **não entra no total** (o total
+  continua sendo ida-e-volta + hotéis, pra não misturar dois jeitos
+  diferentes de voltar pra casa). Deixe em branco pra manter o
+  comportamento de sempre (voo de ida e volta só entre origem e destino).
+  Como é mais uma busca por janela, roteiros com voo de volta comparam
+  menos janelas de data pelo mesmo teto de cota.
 - Uma rodada por vez, com **cooldown de 3h** entre rodadas — global, não por
   roteiro, porque todos gastam da mesma cota mensal. Nada roda sozinho: só
   cota quando alguém clica.
-- Editar cidades, datas, aeroportos ou passageiros de um roteiro descarta a
-  cotação anterior (renomear não).
+- Editar cidades, datas, aeroportos (incluindo o de volta) ou passageiros de
+  um roteiro descarta a cotação anterior (renomear não).
 
 Limites: até 10 cidades por roteiro, 2 a 21 noites no total, 1 a 9
 passageiros, até 20 roteiros salvos.
