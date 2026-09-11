@@ -55,8 +55,10 @@ const MaxHotelClass = 4
 
 // MaxHotelCities caps how many cities one itinerary may string together.
 // Each extra city costs one more search per candidate date, which
-// SearchBudget then pays for out of the candidate count.
-const MaxHotelCities = 4
+// SearchBudget then pays for out of the candidate count — so the quota
+// spent per search stays the same, and a 10-city trip still gets 2
+// departure dates compared.
+const MaxHotelCities = 10
 
 // MaxNameLen bounds a saved itinerary's name, and MaxTrips how many can be
 // kept at once — this is a small group planning a handful of trips, not a

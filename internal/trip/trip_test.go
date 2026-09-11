@@ -1,6 +1,9 @@
 package trip
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestWindowRejectsBadNights(t *testing.T) {
 	if _, err := Window("2027-05-01", "2027-05-31", MinNights-1, MaxCandidates); err == nil {
@@ -126,15 +129,37 @@ func TestParseCitiesRejects(t *testing.T) {
 			{Name: "Miami", Nights: MaxNights},
 			{Name: "Orlando", Nights: 1},
 		}},
-		{"cidades demais", []CityInput{
-			{Name: "A", Nights: 1}, {Name: "B", Nights: 1}, {Name: "C", Nights: 1},
-			{Name: "D", Nights: 1}, {Name: "E", Nights: 1},
-		}},
+		{"cidades demais", cityInputs(MaxHotelCities+1, 1)},
 	}
 	for _, tc := range cases {
 		if _, err := ParseCities(tc.in); err == nil {
 			t.Errorf("%s: expected an error, got none", tc.name)
 		}
+	}
+}
+
+// cityInputs builds n distinct one-leg rows of the given nights each, so the
+// limit tests follow MaxHotelCities instead of hardcoding it.
+func cityInputs(n, nights int) []CityInput {
+	out := make([]CityInput, n)
+	for i := range out {
+		out[i] = CityInput{Name: fmt.Sprintf("Cidade %d", i+1), Nights: nights}
+	}
+	return out
+}
+
+func TestParseCitiesAcceptsMaxCities(t *testing.T) {
+	got, err := ParseCities(cityInputs(MaxHotelCities, 2))
+	if err != nil {
+		t.Fatalf("ParseCities with exactly MaxHotelCities cities: %v", err)
+	}
+	if len(got) != MaxHotelCities {
+		t.Errorf("got %d cities, want %d", len(got), MaxHotelCities)
+	}
+	// The budget has to leave room for more than one departure date even
+	// at the cap, or the longest itineraries lose the date comparison.
+	if n := MaxCandidatesFor(MaxHotelCities); n < 2 {
+		t.Errorf("MaxCandidatesFor(%d) = %d, want at least 2", MaxHotelCities, n)
 	}
 }
 

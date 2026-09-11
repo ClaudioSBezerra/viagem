@@ -41,14 +41,15 @@ Variáveis de ambiente:
   incluídos; o mais barato que atende os filtros vence.
 - **Cota:** cada rodada gasta no máximo 24 buscas no SerpApi (1 voo + 1 hotel
   por cidade, para cada janela de data). Roteiros com mais cidades comparam
-  menos janelas: 1–2 cidades → 8 janelas, 3 cidades → 6, 4 cidades → 4.
+  menos janelas: 1–2 cidades → 8 janelas, 3 → 6, 4–5 → 4, 6–7 → 3,
+  8–10 → 2. A cota gasta por cotação não aumenta com o número de cidades.
 - Uma rodada por vez, com **cooldown de 3h** entre rodadas — global, não por
   roteiro, porque todos gastam da mesma cota mensal. Nada roda sozinho: só
   cota quando alguém clica.
 - Editar cidades, datas, aeroportos ou passageiros de um roteiro descarta a
   cotação anterior (renomear não).
 
-Limites: até 4 cidades por roteiro, 2 a 21 noites no total, 1 a 9
+Limites: até 10 cidades por roteiro, 2 a 21 noites no total, 1 a 9
 passageiros, até 20 roteiros salvos.
 
 ## PDF / impressão
