@@ -126,6 +126,7 @@
   }
   .form-row input[type="number"]{width:5rem;}
   .form-row .iata{width:5rem; text-transform:uppercase; font-family:'IBM Plex Mono',monospace;}
+  .form-row .iata-or-city{width:14rem;}
   .form-row .nome{flex:1 1 16rem; min-width:0;}
   /* Explica, ao vivo, como o período e o roteiro se combinam — sem isso as
      duas datas parecem ser a ida e a volta, e o total de noites (que vem
@@ -270,11 +271,13 @@
     </div>
     <div class="form-row">
       <label for="f-return-airport">Voltando de (opcional)</label>
-      <input type="text" id="f-return-airport" class="iata" maxlength="3" placeholder="MCO">
+      <input type="text" id="f-return-airport" class="iata-or-city" placeholder="Código IATA (MCO) ou cidade (Orlando)" list="return-airport-list">
+      <datalist id="return-airport-list"></datalist>
     </div>
     <p class="hint">Deixe em branco se a volta é do mesmo aeroporto da ida. Preencha só se a
-      última cidade do roteiro tem seu próprio aeroporto (ex.: chega em Miami, mas volta de
-      Orlando) — o app cota essa volta à parte, sem somar ao total de cada janela.</p>
+      última cidade do roteiro tem seu próprio aeroporto (ex.: chega em Lisboa, mas volta de
+      Madri ou Barcelona) — digite o código IATA direto (ex.: LIS) ou o nome da cidade e escolha
+      na lista. O app cota essa volta à parte, sem somar ao total de cada janela.</p>
     <div class="form-row">
       <label for="f-start">Posso viajar entre</label>
       <input type="date" id="f-start">
@@ -447,6 +450,72 @@
     });
   }
 
+  /* ---------------- aeroporto de volta ---------------- */
+
+  // Destinos comuns pra sugerir no campo "Voltando de": quem não sabe o
+  // código IATA de cor digita o nome da cidade e escolhe na lista, em vez
+  // de precisar decorar que Madri é MAD ou Barcelona é BCN. Não precisa
+  // cobrir todo aeroporto do mundo — é só um atalho; o campo sempre aceita
+  // o código IATA digitado direto também.
+  const RETURN_AIRPORTS = [
+    {code:'LIS', city:'Lisboa'}, {code:'OPO', city:'Porto'},
+    {code:'MAD', city:'Madri'}, {code:'BCN', city:'Barcelona'},
+    {code:'CDG', city:'Paris'}, {code:'FCO', city:'Roma'},
+    {code:'MXP', city:'Milão'}, {code:'LHR', city:'Londres'},
+    {code:'AMS', city:'Amsterdã'}, {code:'FRA', city:'Frankfurt'},
+    {code:'JFK', city:'Nova York'}, {code:'MIA', city:'Miami'},
+    {code:'MCO', city:'Orlando'}, {code:'FLL', city:'Fort Lauderdale'},
+    {code:'YYZ', city:'Toronto'}, {code:'EZE', city:'Buenos Aires'},
+    {code:'SCL', city:'Santiago'}, {code:'LIM', city:'Lima'},
+    {code:'MEX', city:'Cidade do México'}, {code:'CUN', city:'Cancún'},
+  ];
+  const RETURN_AIRPORT_SEP = ' — ';
+
+  // Sem acento e minúsculo, pra "Madri", "madri" e "MADRÍ" acharem a mesma
+  // entrada da lista.
+  function foldCase(s){
+    return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  }
+
+  function returnAirportOptionLabel(a){
+    return a.city + RETURN_AIRPORT_SEP + a.code;
+  }
+
+  function populateReturnAirportList(){
+    el('return-airport-list').innerHTML = RETURN_AIRPORTS.map(function(a){
+      return '<option value="' + escapeHtml(returnAirportOptionLabel(a)) + '">';
+    }).join('');
+  }
+
+  // Aceita o que a busca do formulário devolveu: o código de 3 letras
+  // direto, a opção "Cidade — CÓDIGO" escolhida na lista, ou o nome da
+  // cidade digitado à mão sem passar pela lista. Não valida o resultado —
+  // isso já é feito no servidor — só tenta resolver pro código IATA que ele
+  // espera; quando nada bate, devolve o texto como veio e deixa o servidor
+  // reclamar com uma mensagem clara.
+  function resolveReturnAirport(raw){
+    const trimmed = String(raw || '').trim();
+    if(!trimmed) return '';
+
+    const bySuffix = trimmed.split(RETURN_AIRPORT_SEP);
+    const lastPart = bySuffix[bySuffix.length - 1].trim();
+    if(/^[A-Za-z]{3}$/.test(lastPart)) return lastPart.toUpperCase();
+
+    const folded = foldCase(trimmed);
+    const match = RETURN_AIRPORTS.find(function(a){ return foldCase(a.city) === folded; });
+    if(match) return match.code;
+
+    return trimmed.toUpperCase();
+  }
+
+  // Pro sentido contrário: reabrir um roteiro salvo mostra "Cidade — CÓDIGO"
+  // quando o código bate com um destino conhecido, em vez do código pelado.
+  function displayReturnAirport(code){
+    if(!code) return '';
+    const match = RETURN_AIRPORTS.find(function(a){ return a.code === code; });
+    return match ? returnAirportOptionLabel(match) : code;
+  }
+
   /* ---------------- linhas de cidade ---------------- */
 
   const MAX_CITIES = 10;  // espelha trip.MaxHotelCities no servidor
@@ -588,7 +657,7 @@
     el('f-name').value = trip ? trip.name : '';
     el('f-origin').value = trip ? trip.origin : '';
     el('f-dest').value = trip ? trip.dest : '';
-    el('f-return-airport').value = (trip && trip.returnAirport) || '';
+    el('f-return-airport').value = displayReturnAirport(trip && trip.returnAirport);
     el('f-adults').value = trip ? trip.adults : 2;
     el('f-start').value = trip ? trip.windowStart : '';
     el('f-end').value = trip ? trip.windowEnd : '';
@@ -639,7 +708,7 @@
       name: el('f-name').value.trim(),
       origin: el('f-origin').value.trim().toUpperCase(),
       dest: el('f-dest').value.trim().toUpperCase(),
-      returnAirport: el('f-return-airport').value.trim().toUpperCase(),
+      returnAirport: resolveReturnAirport(el('f-return-airport').value),
       adults: parseInt(el('f-adults').value, 10) || 0,
       windowStart: el('f-start').value,
       windowEnd: el('f-end').value,
@@ -877,6 +946,7 @@
   /* ---------------- boot ---------------- */
 
   async function boot(){
+    populateReturnAirportList();
     el('new-trip').addEventListener('click', function(){ openEditor(null); });
     el('add-city').addEventListener('click', function(){ addCityRow('', 3); });
     el('save-trip').addEventListener('click', saveTrip);
