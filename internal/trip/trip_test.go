@@ -158,7 +158,7 @@ func TestParseCitiesAcceptsMaxCities(t *testing.T) {
 	}
 	// The budget has to leave room for more than one departure date even
 	// at the cap, or the longest itineraries lose the date comparison.
-	if n := MaxCandidatesFor(MaxHotelCities); n < 2 {
+	if n := MaxCandidatesFor(MaxHotelCities, false); n < 2 {
 		t.Errorf("MaxCandidatesFor(%d) = %d, want at least 2", MaxHotelCities, n)
 	}
 }
@@ -168,7 +168,7 @@ func TestStaysChainWithoutGaps(t *testing.T) {
 		{ID: "miami", Name: "Miami", Nights: 4},
 		{ID: "orlando", Name: "Orlando", Nights: 3},
 	}
-	candidates, err := Window("2027-05-01", "2027-05-31", TotalNights(cities), MaxCandidatesFor(len(cities)))
+	candidates, err := Window("2027-05-01", "2027-05-31", TotalNights(cities), MaxCandidatesFor(len(cities), false))
 	if err != nil {
 		t.Fatalf("Window: %v", err)
 	}
@@ -200,7 +200,7 @@ func TestStaysChainWithoutGaps(t *testing.T) {
 
 func TestMaxCandidatesForStaysInBudget(t *testing.T) {
 	for cities := 1; cities <= MaxHotelCities; cities++ {
-		n := MaxCandidatesFor(cities)
+		n := MaxCandidatesFor(cities, false)
 		if n < 1 {
 			t.Errorf("%d cities: got %d candidates, want at least 1", cities, n)
 		}
@@ -210,8 +210,28 @@ func TestMaxCandidatesForStaysInBudget(t *testing.T) {
 		}
 	}
 	// O caso comum (duas cidades) não pode ter encolhido com a mudança.
-	if got := MaxCandidatesFor(2); got != MaxCandidates {
-		t.Errorf("MaxCandidatesFor(2) = %d, want the full %d", got, MaxCandidates)
+	if got := MaxCandidatesFor(2, false); got != MaxCandidates {
+		t.Errorf("MaxCandidatesFor(2, false) = %d, want the full %d", got, MaxCandidates)
+	}
+}
+
+// Pricing the extra one-way return flight spends one more search per
+// candidate date, so the budget must give back fewer candidates for it —
+// never more than the plain round-trip case would allow.
+func TestMaxCandidatesForWithReturnFlightStaysInBudget(t *testing.T) {
+	for cities := 1; cities <= MaxHotelCities; cities++ {
+		n := MaxCandidatesFor(cities, true)
+		if n < 1 {
+			t.Errorf("%d cities: got %d candidates, want at least 1", cities, n)
+		}
+		if spend := n * (2 + cities); spend > SearchBudget {
+			t.Errorf("%d cities: %d candidates would spend %d searches, over the %d budget",
+				cities, n, spend, SearchBudget)
+		}
+		if withReturn, without := n, MaxCandidatesFor(cities, false); withReturn > without {
+			t.Errorf("%d cities: pricing the return flight got MORE candidates (%d) than without it (%d)",
+				cities, withReturn, without)
+		}
 	}
 }
 

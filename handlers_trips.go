@@ -13,13 +13,14 @@ import (
 // tripBody is an itinerary as the form sends it. The ID comes from the URL
 // on an update, never from the body, so a save can't retarget another trip.
 type tripBody struct {
-	Name        string           `json:"name"`
-	Origin      string           `json:"origin"`
-	Dest        string           `json:"dest"`
-	WindowStart string           `json:"windowStart"`
-	WindowEnd   string           `json:"windowEnd"`
-	Adults      int              `json:"adults"`
-	Cities      []trip.CityInput `json:"cities"`
+	Name          string           `json:"name"`
+	Origin        string           `json:"origin"`
+	Dest          string           `json:"dest"`
+	WindowStart   string           `json:"windowStart"`
+	WindowEnd     string           `json:"windowEnd"`
+	Adults        int              `json:"adults"`
+	Cities        []trip.CityInput `json:"cities"`
+	ReturnAirport string           `json:"returnAirport"`
 }
 
 // parsed is a tripBody that passed validation, with the cities resolved into
@@ -54,6 +55,20 @@ func parseTripBody(b tripBody) (parsed, error) {
 		return parsed{}, errors.New("origem e destino sao o mesmo aeroporto")
 	}
 
+	// ReturnAirport is optional: blank means the trip just flies the round
+	// trip between origin and dest, same as before this field existed.
+	returnAirport := ""
+	if raw := strings.TrimSpace(b.ReturnAirport); raw != "" {
+		ra, ok := trip.NormalizeAirport(raw)
+		if !ok {
+			return parsed{}, errors.New("aeroporto de volta invalido (codigo IATA de 3 letras, ex: MCO)")
+		}
+		if ra == origin {
+			return parsed{}, errors.New("aeroporto de volta nao pode ser igual ao de origem")
+		}
+		returnAirport = ra
+	}
+
 	adults := b.Adults
 	if adults < 1 || adults > 9 {
 		return parsed{}, errors.New("numero de passageiros deve ser entre 1 e 9")
@@ -67,18 +82,19 @@ func parseTripBody(b tripBody) (parsed, error) {
 
 	// Validate the window against the itinerary now, so an unsearchable trip
 	// is rejected at save time instead of only when someone clicks "cotar".
-	if _, err := trip.Window(b.WindowStart, b.WindowEnd, nights, trip.MaxCandidatesFor(len(cities))); err != nil {
+	if _, err := trip.Window(b.WindowStart, b.WindowEnd, nights, trip.MaxCandidatesFor(len(cities), returnAirport != "")); err != nil {
 		return parsed{}, err
 	}
 
 	stored := store.Trip{
-		Name:        name,
-		Origin:      origin,
-		Dest:        dest,
-		WindowStart: b.WindowStart,
-		WindowEnd:   b.WindowEnd,
-		Adults:      adults,
-		Cities:      make([]store.City, len(cities)),
+		Name:          name,
+		Origin:        origin,
+		Dest:          dest,
+		WindowStart:   b.WindowStart,
+		WindowEnd:     b.WindowEnd,
+		Adults:        adults,
+		Cities:        make([]store.City, len(cities)),
+		ReturnAirport: returnAirport,
 	}
 	for i, c := range cities {
 		stored.Cities[i] = store.City{Name: c.Name, Nights: c.Nights}
@@ -186,6 +202,7 @@ func (s *server) handleUpdateTrip(w http.ResponseWriter, r *http.Request) {
 func itineraryChanged(a, b store.Trip) bool {
 	if a.Origin != b.Origin || a.Dest != b.Dest || a.Adults != b.Adults ||
 		a.WindowStart != b.WindowStart || a.WindowEnd != b.WindowEnd ||
+		a.ReturnAirport != b.ReturnAirport ||
 		len(a.Cities) != len(b.Cities) {
 		return true
 	}
@@ -237,27 +254,28 @@ func (s *server) handleSearchTrip(w http.ResponseWriter, r *http.Request) {
 	p, err := parseTripBody(tripBody{
 		Name: t.Name, Origin: t.Origin, Dest: t.Dest,
 		WindowStart: t.WindowStart, WindowEnd: t.WindowEnd,
-		Adults: t.Adults, Cities: specsOf(t),
+		Adults: t.Adults, Cities: specsOf(t), ReturnAirport: t.ReturnAirport,
 	})
 	if err != nil {
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
 		return
 	}
 
-	candidates, err := trip.Window(t.WindowStart, t.WindowEnd, p.nights, trip.MaxCandidatesFor(len(p.cities)))
+	candidates, err := trip.Window(t.WindowStart, t.WindowEnd, p.nights, trip.MaxCandidatesFor(len(p.cities), t.ReturnAirport != ""))
 	if err != nil {
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
 		return
 	}
 
 	startedAt, wait, ok := s.search.start(searchRequest{
-		TripID:     id,
-		Origin:     t.Origin,
-		Dest:       t.Dest,
-		Adults:     t.Adults,
-		Nights:     p.nights,
-		Cities:     p.cities,
-		Candidates: candidates,
+		TripID:        id,
+		Origin:        t.Origin,
+		Dest:          t.Dest,
+		Adults:        t.Adults,
+		Nights:        p.nights,
+		Cities:        p.cities,
+		Candidates:    candidates,
+		ReturnAirport: t.ReturnAirport,
 	})
 	if !ok {
 		writeCooldown(w, "busca recente demais, aguarde (a cota de consultas e compartilhada por todos os roteiros)", wait)
@@ -265,10 +283,11 @@ func (s *server) handleSearchTrip(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusAccepted, map[string]any{
-		"started":    true,
-		"startedAt":  startedAt.UnixMilli(),
-		"candidates": len(candidates),
-		"cities":     len(p.cities),
-		"nights":     p.nights,
+		"started":       true,
+		"startedAt":     startedAt.UnixMilli(),
+		"candidates":    len(candidates),
+		"cities":        len(p.cities),
+		"nights":        p.nights,
+		"returnAirport": t.ReturnAirport != "",
 	})
 }

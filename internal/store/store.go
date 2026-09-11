@@ -50,8 +50,17 @@ type Trip struct {
 	WindowEnd   string `json:"windowEnd"`
 	Adults      int    `json:"adults"`
 	Cities      []City `json:"cities"`
-	CreatedAt   int64  `json:"createdAt"`
-	UpdatedAt   int64  `json:"updatedAt"`
+
+	// ReturnAirport is the airport near the last city, when it isn't the same
+	// as Dest — e.g. flying into Miami but driving on to Orlando, and flying
+	// home from there instead of backtracking to Miami. Empty means the trip
+	// just flies the round trip between Origin and Dest, as before. When set,
+	// a search also prices a one-way flight home from here, alongside (not
+	// instead of) that round trip — see Candidate.ReturnFlight.
+	ReturnAirport string `json:"returnAirport,omitempty"`
+
+	CreatedAt int64 `json:"createdAt"`
+	UpdatedAt int64 `json:"updatedAt"`
 
 	// Search is the latest pricing run, or nil if this trip has never been
 	// priced. Editing the itinerary clears it, since prices for the old
@@ -72,6 +81,13 @@ type Candidate struct {
 	Return string             `json:"return"`
 	Flight flights.Quote      `json:"flight"`
 	Hotels []quotes.CityQuote `json:"hotels"`
+
+	// ReturnFlight is the extra one-way quote home from the last city, only
+	// priced (and only present) when the trip has a ReturnAirport set. It's a
+	// pointer rather than a bare Quote so its absence is visible on the wire
+	// instead of showing up as a zero-value quote that looks like a pending
+	// or failed one.
+	ReturnFlight *flights.Quote `json:"returnFlight,omitempty"`
 }
 
 // Search is one pricing run over a trip's date window. Only the latest run
@@ -234,6 +250,10 @@ func (t Trip) clone() Trip {
 		run.Candidates = make([]Candidate, len(t.Search.Candidates))
 		for i, c := range t.Search.Candidates {
 			c.Hotels = append([]quotes.CityQuote(nil), c.Hotels...)
+			if c.ReturnFlight != nil {
+				rf := *c.ReturnFlight
+				c.ReturnFlight = &rf
+			}
 			run.Candidates[i] = c
 		}
 		out.Search = &run

@@ -126,6 +126,7 @@
   }
   .form-row input[type="number"]{width:5rem;}
   .form-row .iata{width:5rem; text-transform:uppercase; font-family:'IBM Plex Mono',monospace;}
+  .form-row .iata-or-city{width:14rem;}
   .form-row .nome{flex:1 1 16rem; min-width:0;}
   /* Explica, ao vivo, como o período e o roteiro se combinam — sem isso as
      duas datas parecem ser a ida e a volta, e o total de noites (que vem
@@ -268,6 +269,15 @@
       <label for="f-adults">Passageiros</label>
       <input type="number" id="f-adults" min="1" max="9" value="2">
     </div>
+    <div class="form-row">
+      <label for="f-return-airport">Voltando de (opcional)</label>
+      <input type="text" id="f-return-airport" class="iata-or-city" placeholder="Código IATA (MCO) ou cidade (Orlando)" list="return-airport-list">
+      <datalist id="return-airport-list"></datalist>
+    </div>
+    <p class="hint">Deixe em branco se a volta é do mesmo aeroporto da ida. Preencha só se a
+      última cidade do roteiro tem seu próprio aeroporto (ex.: chega em Lisboa, mas volta de
+      Madri ou Barcelona) — digite o código IATA direto (ex.: LIS) ou o nome da cidade e escolha
+      na lista. O app cota essa volta à parte, sem somar ao total de cada janela.</p>
     <div class="form-row">
       <label for="f-start">Posso viajar entre</label>
       <input type="date" id="f-start">
@@ -424,9 +434,12 @@
       const preco = best === null
         ? (t.search ? 'cotação incompleta' : 'ainda sem cotação')
         : '<span class="preco">a partir de ' + fmtBRL(best) + '</span>';
+      const rota = t.returnAirport
+        ? escapeHtml(t.origin) + ' → ' + escapeHtml(t.dest) + ' ↩ ' + escapeHtml(t.returnAirport)
+        : escapeHtml(t.origin) + ' → ' + escapeHtml(t.dest);
       return '<button type="button" class="trip-card" data-id="' + escapeHtml(t.id) + '">' +
         '<span class="nome">' + escapeHtml(t.name) + '</span>' +
-        '<span class="rota">' + escapeHtml(t.origin) + ' → ' + escapeHtml(t.dest) + '</span>' +
+        '<span class="rota">' + rota + '</span>' +
         '<div class="linha">' + cidades + ' · ' + noites(tripNights(t)) + '</div>' +
         '<div class="linha">' + escapeHtml(fmtDiaAno(t.windowStart)) + ' a ' + escapeHtml(fmtDiaAno(t.windowEnd)) + ' · ' + preco + '</div>' +
         '</button>';
@@ -435,6 +448,72 @@
     Array.prototype.forEach.call(box.querySelectorAll('.trip-card'), function(card){
       card.addEventListener('click', function(){ openTrip(card.dataset.id); });
     });
+  }
+
+  /* ---------------- aeroporto de volta ---------------- */
+
+  // Destinos comuns pra sugerir no campo "Voltando de": quem não sabe o
+  // código IATA de cor digita o nome da cidade e escolhe na lista, em vez
+  // de precisar decorar que Madri é MAD ou Barcelona é BCN. Não precisa
+  // cobrir todo aeroporto do mundo — é só um atalho; o campo sempre aceita
+  // o código IATA digitado direto também.
+  const RETURN_AIRPORTS = [
+    {code:'LIS', city:'Lisboa'}, {code:'OPO', city:'Porto'},
+    {code:'MAD', city:'Madri'}, {code:'BCN', city:'Barcelona'},
+    {code:'CDG', city:'Paris'}, {code:'FCO', city:'Roma'},
+    {code:'MXP', city:'Milão'}, {code:'LHR', city:'Londres'},
+    {code:'AMS', city:'Amsterdã'}, {code:'FRA', city:'Frankfurt'},
+    {code:'JFK', city:'Nova York'}, {code:'MIA', city:'Miami'},
+    {code:'MCO', city:'Orlando'}, {code:'FLL', city:'Fort Lauderdale'},
+    {code:'YYZ', city:'Toronto'}, {code:'EZE', city:'Buenos Aires'},
+    {code:'SCL', city:'Santiago'}, {code:'LIM', city:'Lima'},
+    {code:'MEX', city:'Cidade do México'}, {code:'CUN', city:'Cancún'},
+  ];
+  const RETURN_AIRPORT_SEP = ' — ';
+
+  // Sem acento e minúsculo, pra "Madri", "madri" e "MADRÍ" acharem a mesma
+  // entrada da lista.
+  function foldCase(s){
+    return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  }
+
+  function returnAirportOptionLabel(a){
+    return a.city + RETURN_AIRPORT_SEP + a.code;
+  }
+
+  function populateReturnAirportList(){
+    el('return-airport-list').innerHTML = RETURN_AIRPORTS.map(function(a){
+      return '<option value="' + escapeHtml(returnAirportOptionLabel(a)) + '">';
+    }).join('');
+  }
+
+  // Aceita o que a busca do formulário devolveu: o código de 3 letras
+  // direto, a opção "Cidade — CÓDIGO" escolhida na lista, ou o nome da
+  // cidade digitado à mão sem passar pela lista. Não valida o resultado —
+  // isso já é feito no servidor — só tenta resolver pro código IATA que ele
+  // espera; quando nada bate, devolve o texto como veio e deixa o servidor
+  // reclamar com uma mensagem clara.
+  function resolveReturnAirport(raw){
+    const trimmed = String(raw || '').trim();
+    if(!trimmed) return '';
+
+    const bySuffix = trimmed.split(RETURN_AIRPORT_SEP);
+    const lastPart = bySuffix[bySuffix.length - 1].trim();
+    if(/^[A-Za-z]{3}$/.test(lastPart)) return lastPart.toUpperCase();
+
+    const folded = foldCase(trimmed);
+    const match = RETURN_AIRPORTS.find(function(a){ return foldCase(a.city) === folded; });
+    if(match) return match.code;
+
+    return trimmed.toUpperCase();
+  }
+
+  // Pro sentido contrário: reabrir um roteiro salvo mostra "Cidade — CÓDIGO"
+  // quando o código bate com um destino conhecido, em vez do código pelado.
+  function displayReturnAirport(code){
+    if(!code) return '';
+    const match = RETURN_AIRPORTS.find(function(a){ return a.code === code; });
+    return match ? returnAirportOptionLabel(match) : code;
   }
 
   /* ---------------- linhas de cidade ---------------- */
@@ -520,8 +599,12 @@
         utcToDia(start) + '</strong> e volta em <strong>' + utcToDia(end) + '</strong> — uma data só.';
       return;
     }
+    // Um aeroporto de volta preenchido soma mais uma busca por janela (o voo
+    // de volta a partir da última cidade), espelhando trip.MaxCandidatesFor.
+    const hasReturnAirport = el('f-return-airport').value.trim().length > 0;
     const partidas = dias - nights + 1;
-    const comparadas = Math.min(partidas, MAX_CANDIDATES, Math.max(1, Math.floor(SEARCH_BUDGET / (1 + cities.length))));
+    const perCandidate = 1 + cities.length + (hasReturnAirport ? 1 : 0);
+    const comparadas = Math.min(partidas, MAX_CANDIDATES, Math.max(1, Math.floor(SEARCH_BUDGET / perCandidate)));
     info.innerHTML = 'Período de <strong>' + dias + ' dias</strong>, roteiro de <strong>' + noites(nights) +
       '</strong>: a partida pode ser entre <strong>' + utcToDia(start) + '</strong> e <strong>' + utcToDia(ultimaPartida) +
       '</strong>. O sistema compara ' + (comparadas === partidas ? 'todas as ' : '') + comparadas +
@@ -574,6 +657,7 @@
     el('f-name').value = trip ? trip.name : '';
     el('f-origin').value = trip ? trip.origin : '';
     el('f-dest').value = trip ? trip.dest : '';
+    el('f-return-airport').value = displayReturnAirport(trip && trip.returnAirport);
     el('f-adults').value = trip ? trip.adults : 2;
     el('f-start').value = trip ? trip.windowStart : '';
     el('f-end').value = trip ? trip.windowEnd : '';
@@ -624,6 +708,7 @@
       name: el('f-name').value.trim(),
       origin: el('f-origin').value.trim().toUpperCase(),
       dest: el('f-dest').value.trim().toUpperCase(),
+      returnAirport: resolveReturnAirport(el('f-return-airport').value),
       adults: parseInt(el('f-adults').value, 10) || 0,
       windowStart: el('f-start').value,
       windowEnd: el('f-end').value,
@@ -708,7 +793,8 @@
       return;
     }
 
-    pollSearch(id, data.startedAt, data.candidates * (1 + data.cities));
+    const perCandidate = 1 + data.cities + (data.returnAirport ? 1 : 0);
+    pollSearch(id, data.startedAt, data.candidates * perCandidate);
   }
 
   // O servidor grava o progresso a cada candidata, então acompanhar é só
@@ -744,6 +830,7 @@
         }
         const done = trip.search.candidates.reduce(function(n, c){
           return n + (c.flight && c.flight.ts ? 1 : 0) +
+                 (c.returnFlight && c.returnFlight.ts ? 1 : 0) +
                  (c.hotels || []).filter(function(h){ return h.ts; }).length;
         }, 0);
         setStatus('detail-status', 'Cotando… ' + done + (totalSearches ? ' de ' + totalSearches : '') + ' itens atualizados.');
@@ -779,9 +866,12 @@
     const roteiro = (trip.cities || []).map(function(c){
       return escapeHtml(c.name) + ' (' + noites(c.nights) + ')';
     }).join(' → ');
+    const volta = trip.returnAirport
+      ? ' (volta de ' + escapeHtml(trip.returnAirport) + ' cotada à parte)'
+      : '';
     el('print-head').innerHTML =
       '<h2>' + escapeHtml(trip.name) + '</h2>' +
-      '<p class="meta">' + escapeHtml(trip.origin) + ' → ' + escapeHtml(trip.dest) +
+      '<p class="meta">' + escapeHtml(trip.origin) + ' → ' + escapeHtml(trip.dest) + volta +
         ' · ' + noites(tripNights(trip)) + ' no total' +
         ' · período pesquisado de ' + escapeHtml(fmtDiaAno(trip.windowStart)) +
         ' a ' + escapeHtml(fmtDiaAno(trip.windowEnd)) + '</p>' +
@@ -816,10 +906,21 @@
         ? 'cotando…'
         : (c.flight.price ? (c.flight.currency + ' ' + c.flight.price) : (c.flight.error || 'sem cotação'));
       const best = idx === 0 && t !== null ? ' <span class="best">★ melhor opção</span>' : '';
+      // À parte do total: uma alternativa pra comparar, não somada a ele —
+      // ida e volta pela mesma rota (já no total acima) ou ida até o
+      // primeiro destino e volta a partir da última cidade (fora do total).
+      const returnFlightLine = c.returnFlight
+        ? '<div class="resumo-line"><span>Voo de volta (a partir da última cidade)</span><span>' +
+            escapeHtml(!c.returnFlight.ts
+              ? 'cotando…'
+              : (c.returnFlight.price ? (c.returnFlight.currency + ' ' + c.returnFlight.price) : (c.returnFlight.error || 'sem cotação'))) +
+          '</span></div>'
+        : '';
       return '<div class="resumo-box">' +
         '<div class="resumo-line total"><span>' + escapeHtml(fmtDia(c.depart) + ' a ' + fmtDia(c.return)) + best +
           '</span><span>' + (t !== null ? fmtBRL(t) : '—') + '</span></div>' +
         '<div class="resumo-line"><span>Voo (ida e volta)</span><span>' + escapeHtml(flightVal) + '</span></div>' +
+        returnFlightLine +
         (c.hotels || []).map(hotelLine).join('') +
         '</div>';
     }).join('');
@@ -845,6 +946,7 @@
   /* ---------------- boot ---------------- */
 
   async function boot(){
+    populateReturnAirportList();
     el('new-trip').addEventListener('click', function(){ openEditor(null); });
     el('add-city').addEventListener('click', function(){ addCityRow('', 3); });
     el('save-trip').addEventListener('click', saveTrip);
@@ -854,6 +956,7 @@
     el('print-pdf').addEventListener('click', printSuggestion);
     el('f-start').addEventListener('input', refreshWindowInfo);
     el('f-end').addEventListener('input', refreshWindowInfo);
+    el('f-return-airport').addEventListener('input', refreshWindowInfo);
 
     try{
       const cfg = await api('/api/config');

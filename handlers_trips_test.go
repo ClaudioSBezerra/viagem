@@ -71,7 +71,9 @@ func createTrip(t *testing.T, s *server, body map[string]any) store.Trip {
 
 func TestCreateTripNormalizesAndStores(t *testing.T) {
 	s := newTestServer(t, false)
-	got := createTrip(t, s, validBody())
+	body := validBody()
+	body["returnAirport"] = "mco"
+	got := createTrip(t, s, body)
 
 	if got.ID == "" {
 		t.Error("no ID assigned")
@@ -81,22 +83,37 @@ func TestCreateTripNormalizesAndStores(t *testing.T) {
 	if got.Origin != "GYN" || got.Dest != "MIA" {
 		t.Errorf("airports not normalized: %s -> %s", got.Origin, got.Dest)
 	}
+	if got.ReturnAirport != "MCO" {
+		t.Errorf("returnAirport not normalized: %q", got.ReturnAirport)
+	}
 	if len(got.Cities) != 2 || got.Cities[0].Name != "Downtown Miami" {
 		t.Errorf("cities wrong or reordered: %+v", got.Cities)
 	}
 }
 
+// A blank returnAirport is the common case (fly the round trip, same as
+// before this field existed) and must not be rejected.
+func TestCreateTripWithoutReturnAirport(t *testing.T) {
+	s := newTestServer(t, false)
+	got := createTrip(t, s, validBody())
+	if got.ReturnAirport != "" {
+		t.Errorf("returnAirport = %q, want empty", got.ReturnAirport)
+	}
+}
+
 func TestCreateTripRejects(t *testing.T) {
 	cases := map[string]func(m map[string]any){
-		"sem nome":              func(m map[string]any) { m["name"] = "  " },
-		"origem invalida":       func(m map[string]any) { m["origin"] = "GOIANIA" },
-		"destino invalido":      func(m map[string]any) { m["dest"] = "" },
-		"origem igual destino":  func(m map[string]any) { m["dest"] = "GYN" },
-		"passageiros zero":      func(m map[string]any) { m["adults"] = 0 },
-		"passageiros demais":    func(m map[string]any) { m["adults"] = 10 },
-		"sem cidades":           func(m map[string]any) { m["cities"] = []map[string]any{} },
-		"janela menor que trip": func(m map[string]any) { m["windowEnd"] = "2027-05-03" },
-		"data invalida":         func(m map[string]any) { m["windowStart"] = "01/05/2027" },
+		"sem nome":                    func(m map[string]any) { m["name"] = "  " },
+		"origem invalida":             func(m map[string]any) { m["origin"] = "GOIANIA" },
+		"destino invalido":            func(m map[string]any) { m["dest"] = "" },
+		"origem igual destino":        func(m map[string]any) { m["dest"] = "GYN" },
+		"passageiros zero":            func(m map[string]any) { m["adults"] = 0 },
+		"passageiros demais":          func(m map[string]any) { m["adults"] = 10 },
+		"sem cidades":                 func(m map[string]any) { m["cities"] = []map[string]any{} },
+		"janela menor que trip":       func(m map[string]any) { m["windowEnd"] = "2027-05-03" },
+		"data invalida":               func(m map[string]any) { m["windowStart"] = "01/05/2027" },
+		"aeroporto de volta invalido": func(m map[string]any) { m["returnAirport"] = "ORLANDO" },
+		"aeroporto de volta = origem": func(m map[string]any) { m["returnAirport"] = "gyn" },
 	}
 	for name, mutate := range cases {
 		s := newTestServer(t, false)
@@ -137,6 +154,21 @@ func TestUpdateTripClearsStalePricing(t *testing.T) {
 	}
 	if got, _ := s.store.GetTrip(created.ID); got.Search != nil {
 		t.Error("pricing for the old itinerary survived an edit")
+	}
+
+	// Neither does adding/changing the return airport: it changes which
+	// flight gets priced, same as origin/dest would.
+	if err := s.store.SetSearch(created.ID, store.Search{StartedAt: 2, Done: true}); err != nil {
+		t.Fatalf("SetSearch: %v", err)
+	}
+	body = validBody()
+	body["returnAirport"] = "mco"
+	w = do(t, s, "PUT", "/api/trips/"+created.ID, body)
+	if w.Code != http.StatusOK {
+		t.Fatalf("edit: got %d, body %s", w.Code, w.Body.String())
+	}
+	if got, _ := s.store.GetTrip(created.ID); got.Search != nil {
+		t.Error("pricing survived setting a returnAirport")
 	}
 }
 
