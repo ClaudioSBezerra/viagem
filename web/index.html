@@ -127,6 +127,12 @@
   .form-row input[type="number"]{width:5rem;}
   .form-row .iata{width:5rem; text-transform:uppercase; font-family:'IBM Plex Mono',monospace;}
   .form-row .nome{flex:1 1 16rem; min-width:0;}
+  /* Explica, ao vivo, como o período e o roteiro se combinam — sem isso as
+     duas datas parecem ser a ida e a volta, e o total de noites (que vem
+     das cidades) parece estar calculado errado. */
+  .hint{font-size:0.83rem; color:rgba(239,231,214,0.7); margin:-0.2rem 0 0.8rem; min-height:1.2em;}
+  .hint strong{color:var(--brass); font-weight:600;}
+  .hint.warn, .hint.warn strong{color:var(--rust);}
 
   .city-plan{margin:0.9rem 0; padding:0.9rem 1rem; border:1px solid rgba(239,231,214,0.16); border-radius:12px;}
   .city-plan-head{
@@ -233,7 +239,7 @@
 <header class="hero">
   <div class="eyebrow">Planejador de roteiros</div>
   <h1>Monte a viagem <em>e descubra</em><br>a semana mais barata</h1>
-  <p class="sub">Diga as cidades, quantas noites em cada uma e o período em que a viagem pode acontecer. O sistema testa várias janelas de data dentro desse período e cota, para cada uma, o voo de ida e volta mais um hotel por cidade — para você ver qual semana sai mais em conta.</p>
+  <p class="sub">Diga o período em que vocês podem viajar, as cidades e quantas noites em cada uma. O sistema testa várias janelas de data dentro desse período e cota, para cada uma, o voo de ida e volta mais um hotel por cidade — para você ver qual semana sai mais em conta.</p>
   <div class="quickbar">
     <button type="button" class="btn btn-brass" id="new-trip">+ Novo roteiro</button>
     <a class="btn btn-ghost" href="#dicas">⚠️ Dicas de carro/estrada</a>
@@ -263,11 +269,12 @@
       <input type="number" id="f-adults" min="1" max="9" value="2">
     </div>
     <div class="form-row">
-      <label for="f-start">A viagem pode começar entre</label>
+      <label for="f-start">Posso viajar entre</label>
       <input type="date" id="f-start">
       <label for="f-end">e</label>
       <input type="date" id="f-end">
     </div>
+    <p id="window-info" class="hint"></p>
 
     <div class="city-plan">
       <div class="city-plan-head">
@@ -441,16 +448,84 @@
   // Renumera as linhas e recalcula o total. A ordem das linhas é a ordem da
   // viagem — o servidor encadeia os check-ins nessa sequência —, então o
   // número na frente não é enfeite: diz em que ordem as cidades entram.
+  // Só conta linha com cidade preenchida, igual ao servidor (que descarta
+  // as linhas em branco): senão a linha vazia que o formulário já traz
+  // aparece somando noites de uma cidade que não existe.
   function refreshCityRows(){
     const rows = cityRows();
-    let total = 0;
     rows.forEach(function(row, i){
       row.querySelector('.seq').textContent = (i + 1) + '.';
       row.querySelector('.drop').hidden = rows.length <= 1;
-      total += parseInt(row.querySelector('input[type="number"]').value, 10) || 0;
     });
+    const total = citiesPayload().reduce(function(n, c){ return n + c.nights; }, 0);
     el('total-nights').textContent = noites(total) + ' no total';
     el('add-city').disabled = rows.length >= MAX_CITIES;
+    refreshWindowInfo();
+  }
+
+  /* Espelha trip.Window e trip.MaxCandidatesFor do servidor: a partida pode
+     cair do primeiro dia do período até o último dia que ainda deixa o
+     roteiro inteiro terminar dentro dele, e o número de datas comparadas
+     encolhe com o número de cidades, pra caber no teto de consultas. */
+  const SEARCH_BUDGET = 24, MAX_CANDIDATES = 8;
+  const MIN_NIGHTS = 2, MAX_NIGHTS = 21;   // espelha trip.MinNights/MaxNights
+
+  function isoToUTC(iso){
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+    return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : null;
+  }
+  function utcToDia(ms){
+    const d = new Date(ms);
+    return String(d.getUTCDate()).padStart(2, '0') + '/' + String(d.getUTCMonth() + 1).padStart(2, '0');
+  }
+
+  function refreshWindowInfo(){
+    const info = el('window-info');
+    const start = isoToUTC(el('f-start').value);
+    const end = isoToUTC(el('f-end').value);
+    const cities = citiesPayload();
+    const nights = cities.reduce(function(n, c){ return n + c.nights; }, 0);
+    info.className = 'hint';
+
+    if(start === null || end === null){
+      info.textContent = 'Informe o período em que vocês podem viajar. A duração da viagem vem da soma das noites das cidades abaixo.';
+      return;
+    }
+    const dias = Math.round((end - start) / 86400000);
+    if(dias <= 0){
+      info.className = 'hint warn';
+      info.textContent = 'A data final do período precisa ser depois da inicial.';
+      return;
+    }
+    if(!cities.length || !nights){
+      info.innerHTML = 'Período de <strong>' + dias + ' dias</strong>. Agora informe as cidades e as noites em cada uma.';
+      return;
+    }
+    if(nights > MAX_NIGHTS || nights < MIN_NIGHTS){
+      info.className = 'hint warn';
+      info.innerHTML = 'O roteiro tem <strong>' + noites(nights) + '</strong>, mas precisa ter entre <strong>' +
+        MIN_NIGHTS + ' e ' + MAX_NIGHTS + ' noites</strong> no total.';
+      return;
+    }
+    if(nights > dias){
+      info.className = 'hint warn';
+      info.innerHTML = 'O roteiro tem <strong>' + noites(nights) + '</strong> e não cabe no período de <strong>' + dias +
+        ' dias</strong> — aumente o período ou tire noites de alguma cidade.';
+      return;
+    }
+
+    const ultimaPartida = start + (dias - nights) * 86400000;
+    if(ultimaPartida === start){
+      info.innerHTML = 'Roteiro de <strong>' + noites(nights) + '</strong> ocupa o período inteiro: ida em <strong>' +
+        utcToDia(start) + '</strong> e volta em <strong>' + utcToDia(end) + '</strong> — uma data só.';
+      return;
+    }
+    const partidas = dias - nights + 1;
+    const comparadas = Math.min(partidas, MAX_CANDIDATES, Math.max(1, Math.floor(SEARCH_BUDGET / (1 + cities.length))));
+    info.innerHTML = 'Período de <strong>' + dias + ' dias</strong>, roteiro de <strong>' + noites(nights) +
+      '</strong>: a partida pode ser entre <strong>' + utcToDia(start) + '</strong> e <strong>' + utcToDia(ultimaPartida) +
+      '</strong>. O sistema compara ' + (comparadas === partidas ? 'todas as ' : '') + comparadas +
+      ' datas de partida e mostra a mais barata.';
   }
 
   function addCityRow(name, nights){
@@ -471,6 +546,7 @@
       refreshCityRows();
     });
     row.querySelector('input[type="number"]').addEventListener('input', refreshCityRows);
+    row.querySelector('input[type="text"]').addEventListener('input', refreshCityRows);
     list.appendChild(row);
     refreshCityRows();
   }
@@ -707,8 +783,8 @@
       '<h2>' + escapeHtml(trip.name) + '</h2>' +
       '<p class="meta">' + escapeHtml(trip.origin) + ' → ' + escapeHtml(trip.dest) +
         ' · ' + noites(tripNights(trip)) + ' no total' +
-        ' · a viagem pode começar entre ' + escapeHtml(fmtDiaAno(trip.windowStart)) +
-        ' e ' + escapeHtml(fmtDiaAno(trip.windowEnd)) + '</p>' +
+        ' · período pesquisado de ' + escapeHtml(fmtDiaAno(trip.windowStart)) +
+        ' a ' + escapeHtml(fmtDiaAno(trip.windowEnd)) + '</p>' +
       '<p class="meta">Cotado em ' + escapeHtml(new Date().toLocaleString('pt-BR')) +
         ' · ' + trip.adults + ' passageiro(s) · hotéis até 4★ com café da manhã e estacionamento incluídos' +
         ' · valores sujeitos a mudança até a reserva</p>' +
@@ -776,6 +852,8 @@
     el('run-search').addEventListener('click', runSearch);
     el('back-to-list').addEventListener('click', showList);
     el('print-pdf').addEventListener('click', printSuggestion);
+    el('f-start').addEventListener('input', refreshWindowInfo);
+    el('f-end').addEventListener('input', refreshWindowInfo);
 
     try{
       const cfg = await api('/api/config');
