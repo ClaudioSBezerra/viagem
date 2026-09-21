@@ -250,8 +250,9 @@ func (t Trip) clone() Trip {
 		run.Candidates = make([]Candidate, len(t.Search.Candidates))
 		for i, c := range t.Search.Candidates {
 			c.Hotels = append([]quotes.CityQuote(nil), c.Hotels...)
+			c.Flight = c.Flight.Clone()
 			if c.ReturnFlight != nil {
-				rf := *c.ReturnFlight
+				rf := c.ReturnFlight.Clone()
 				c.ReturnFlight = &rf
 			}
 			run.Candidates[i] = c

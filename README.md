@@ -71,6 +71,13 @@ salvar como PDF — e a folha de impressão mostra apenas a sugestão daquele
 roteiro, com cabeçalho próprio (nome, aeroportos, período, roteiro, data da
 cotação e critérios dos hotéis).
 
+Cada janela de data traz, abaixo do preço do voo, o detalhe do voo cotado — o
+mesmo que aparece na tela: para ida e volta, companhia, número do voo,
+aeroportos e horários de cada trecho (com escalas e duração total). O mesmo
+vale para o voo de volta a partir da última cidade. Cotações gravadas antes
+desse detalhe existir mostram só o preço e um aviso; o detalhe aparece na
+próxima cotação.
+
 ## API
 
 | Método | Rota | O quê |

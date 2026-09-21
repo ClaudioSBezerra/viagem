@@ -42,9 +42,32 @@ type Spec struct {
 	OneWay   bool
 }
 
+// Segment is one flight of a leg — a single takeoff and landing on one
+// airline. Depart and Arrive are local times at each airport, kept in the
+// "2027-05-04 08:30" form SerpApi returns them in.
+type Segment struct {
+	Airline string `json:"airline,omitempty"`
+	Number  string `json:"number,omitempty"` // e.g. "LA 8084"
+	From    string `json:"from"`             // IATA airport code
+	Depart  string `json:"depart,omitempty"`
+	To      string `json:"to"`
+	Arrive  string `json:"arrive,omitempty"`
+	Minutes int    `json:"minutes,omitempty"`
+}
+
+// Leg is one direction of the trip as the chosen fare flies it: more than one
+// Segment means a connection.
+type Leg struct {
+	Segments []Segment `json:"segments"`
+	Minutes  int       `json:"minutes,omitempty"` // door to door, layovers included
+}
+
 // Quote is the result of pricing a Spec. Price is empty when any step failed,
 // in which case Err says why. The SerpApi key never appears here — Quote is
 // what gets cached to disk and served over the API.
+//
+// Outbound and Inbound describe the flights behind Price. Inbound is only set
+// for a round trip; quotes cached before these fields existed have neither.
 type Quote struct {
 	ID       string `json:"id"`
 	Label    string `json:"label"`
@@ -53,6 +76,25 @@ type Quote struct {
 	Source   string `json:"source"`
 	Err      string `json:"error,omitempty"`
 	Ts       int64  `json:"ts"`
+	Outbound *Leg   `json:"outbound,omitempty"`
+	Inbound  *Leg   `json:"inbound,omitempty"`
+}
+
+// Clone returns a copy that shares no memory with q, so a snapshot handed out
+// of the store can't be changed through the stored quote.
+func (q Quote) Clone() Quote {
+	q.Outbound = q.Outbound.clone()
+	q.Inbound = q.Inbound.clone()
+	return q
+}
+
+func (l *Leg) clone() *Leg {
+	if l == nil {
+		return nil
+	}
+	c := *l
+	c.Segments = append([]Segment(nil), l.Segments...)
+	return &c
 }
 
 // Fetcher prices Specs against SerpApi's Google Flights engine.
@@ -71,8 +113,44 @@ func NewFetcher(apiKey string) *Fetcher {
 }
 
 type flightOption struct {
-	Price          float64 `json:"price"`
-	DepartureToken string  `json:"departure_token"`
+	Price          float64      `json:"price"`
+	DepartureToken string       `json:"departure_token"`
+	Flights        []serpFlight `json:"flights"`
+	TotalDuration  int          `json:"total_duration"`
+}
+
+type serpFlight struct {
+	DepartureAirport serpAirport `json:"departure_airport"`
+	ArrivalAirport   serpAirport `json:"arrival_airport"`
+	Duration         int         `json:"duration"`
+	Airline          string      `json:"airline"`
+	FlightNumber     string      `json:"flight_number"`
+}
+
+type serpAirport struct {
+	ID   string `json:"id"`
+	Time string `json:"time"`
+}
+
+// leg turns a SerpApi option into the trimmed-down shape stored with a Quote,
+// or nil when the option carries no flight detail.
+func (o flightOption) leg() *Leg {
+	if len(o.Flights) == 0 {
+		return nil
+	}
+	l := &Leg{Minutes: o.TotalDuration, Segments: make([]Segment, len(o.Flights))}
+	for i, f := range o.Flights {
+		l.Segments[i] = Segment{
+			Airline: f.Airline,
+			Number:  f.FlightNumber,
+			From:    f.DepartureAirport.ID,
+			Depart:  f.DepartureAirport.Time,
+			To:      f.ArrivalAirport.ID,
+			Arrive:  f.ArrivalAirport.Time,
+			Minutes: f.Duration,
+		}
+	}
+	return l
 }
 
 type serpResponse struct {
@@ -151,6 +229,7 @@ func (f *Fetcher) Fetch(ctx context.Context, s Spec) Quote {
 		q.Err = "nenhum voo de ida encontrado"
 		return q
 	}
+	q.Outbound = best.leg()
 	if best.DepartureToken == "" {
 		// Sem token de retorno para combinar: usa o preco de ida como esta.
 		q.Price = fmt.Sprintf("%.0f", best.Price)
@@ -173,6 +252,7 @@ func (f *Fetcher) Fetch(ctx context.Context, s Spec) Quote {
 	}
 
 	q.Price = fmt.Sprintf("%.0f", final.Price)
+	q.Inbound = final.leg()
 	return q
 }
 
